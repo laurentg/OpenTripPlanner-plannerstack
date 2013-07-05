@@ -51,6 +51,7 @@ import org.opentripplanner.routing.edgetype.PatternHop;
 import org.opentripplanner.routing.edgetype.PlainStreetEdge;
 import org.opentripplanner.routing.edgetype.PreAlightEdge;
 import org.opentripplanner.routing.edgetype.PreBoardEdge;
+import org.opentripplanner.routing.edgetype.StreetBikeRentalLink;
 import org.opentripplanner.routing.edgetype.StreetEdge;
 import org.opentripplanner.routing.error.PathNotFoundException;
 import org.opentripplanner.routing.error.TrivialPathException;
@@ -538,7 +539,7 @@ public class PlanGenerator {
         leg.legGeometry = PolylineEncoder.createEncodings(geometry);
         Edge backEdge = state.getBackEdge();
         String name;
-        if (backEdge instanceof StreetEdge) {
+        if ((backEdge instanceof StreetEdge) || (backEdge instanceof StreetBikeRentalLink)) {
             name = backEdge.getName();
         } else {
             name = state.getVertex().getName();
