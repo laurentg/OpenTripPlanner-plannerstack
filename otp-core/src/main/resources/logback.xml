@@ -7,31 +7,32 @@ depends on otp-routing.
 
   <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
     <encoder>
-      <!-- simple logging -->
-<!-- 	  <pattern>%d{HH:mm:ss} %level %msg%n</pattern> -->
-      <!-- debug logging: print out file and line number in parenthesis, which Eclipse will link -->
-      <pattern>%d{HH:mm:ss.SSS} %level \(%F:%L\) %msg%n</pattern>
+      <pattern>%d{yyyy-MM-dd/HH:mm:ss.SSS} [%t] \(%F:%L\) %-5p %m%n</pattern>
     </encoder>
   </appender>
 
-  <root level="info">
-    <appender-ref ref="STDOUT" />
+  <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>${catalina.base}/logs/otp.log</file>
+    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+      <!-- daily rollover -->
+      <fileNamePattern>${catalina.base}/logs/otp-%d{yyyy-MM-dd}.log</fileNamePattern>
+      <!-- keep 30 days' worth of history -->
+      <maxHistory>30</maxHistory>
+    </rollingPolicy>
+    <encoder>
+      <pattern>%d{yyyy-MM-dd/HH:mm:ss.SSS} [%t] \(%F:%L\) %-5p %m%n</pattern>
+    </encoder>
+  </appender> 
+
+  <root level="warn">
+    <appender-ref ref="FILE" />
   </root>
   
-  <logger name="org.opentripplanner" level="info" />
-  <logger name="org.opentripplanner.analyst" level="info" />
-  <logger name="org.opentripplanner.routing" level="info" />
-  <logger name="org.opentripplanner.routing.impl.RetryingPathServiceImpl" level="debug" />
-  <logger name="org.opentripplanner.routing.algorithm.GenericAStar" level="debug" />
-  <!-- Avoid printing debug messages about free-flowing vertices -->
-  <logger name="org.opentripplanner.routing.vertextype.IntersectionVertex" level="info" />
-  <!-- Avoid printing debug messages when walk limits are exceeded -->
-  <logger name="org.opentripplanner.routing.edgetype.PlainStreetEdge" level="info" />
+  <logger name="org.opentripplanner" level="warn" />
   <!-- Avoid printing info messages about calendars when building graph -->
   <logger name="org.onebusaway.gtfs.impl.calendar.CalendarServiceDataFactoryImpl" level="warn" />
   <!-- Avoid printing ugly warning message when unable to create websocket connection -->
   <logger name="com.ning.http.client.providers.netty.NettyAsyncHttpProvider" level="error" />
-  
   <logger name="org.springframework" level="warn" />
   <logger name="com.sun.jersey" level="warn" />
   
