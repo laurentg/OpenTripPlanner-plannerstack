@@ -200,6 +200,12 @@ public class RoutingRequest implements Cloneable, Serializable {
     /** Cost of dropping-off a rented bike */
     public int bikeRentalDropoffCost = 30;
 
+    /** Time to park a bike */
+    public int bikeParkTime = 60;
+
+    /** Cost of parking a bike. */
+    public int bikeParkCost = 120;
+
     /**
      * Time to park a car in a park and ride, w/o taking into account driving and walking cost
      * (time to park, switch off, pick your stuff, lock the car, etc...)
@@ -380,6 +386,8 @@ public class RoutingRequest implements Cloneable, Serializable {
 	private double softWalkPenalty = 60.0; // a jump in cost when stepping over the walking limit
 	private double softWalkOverageRate = 5.0; // a jump in cost for every meter over the walking limit
 
+    public boolean bikeParkAndRide = false;
+	
     /* CONSTRUCTORS */
 
     /** Constructor for options; modes defaults to walk and transit */
