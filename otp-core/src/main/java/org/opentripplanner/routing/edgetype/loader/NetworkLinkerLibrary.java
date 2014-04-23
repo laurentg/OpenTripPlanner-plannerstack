@@ -13,6 +13,7 @@
 
 package org.opentripplanner.routing.edgetype.loader;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -24,8 +25,12 @@ import org.opentripplanner.common.geometry.SphericalDistanceLibrary;
 import org.opentripplanner.common.model.P2;
 import org.opentripplanner.extra_graph.EdgesForRoute;
 import org.opentripplanner.routing.core.RoutingRequest;
+import org.opentripplanner.routing.core.TraverseMode;
+import org.opentripplanner.routing.core.TraverseModeSet;
 import org.opentripplanner.routing.edgetype.PlainStreetEdge;
+import org.opentripplanner.routing.edgetype.StreetBikeRentalLink;
 import org.opentripplanner.routing.edgetype.StreetEdge;
+import org.opentripplanner.routing.graph.Edge;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.routing.graph.Vertex;
 import org.opentripplanner.routing.impl.StreetVertexIndexServiceImpl;
@@ -46,7 +51,7 @@ public class NetworkLinkerLibrary {
     HashMap<HashSet<StreetEdge>, LinkedList<P2<PlainStreetEdge>>> replacements = 
         new HashMap<HashSet<StreetEdge>, LinkedList<P2<PlainStreetEdge>>>();
     
-    /* a map to track which vertices were associated with each transit stop, to avoid repeat splitting */
+    /* a map to track which vertices were associated with each linked vertex, to avoid repeat splitting */
     HashMap<Vertex, Collection<StreetVertex>> splitVertices = 
             new HashMap<Vertex, Collection<StreetVertex>> (); 
 
@@ -93,7 +98,14 @@ public class NetworkLinkerLibrary {
      */
     public LinkRequest connectVertexToStreets(BikeRentalStationVertex v) {
         LinkRequest request = new LinkRequest(this);
-        request.connectVertexToStreets(v);
+        request.connectVertexToStreets(v, new TraverseModeSet(TraverseMode.WALK,
+                TraverseMode.BICYCLE), new StreetLinkFactory<BikeRentalStationVertex>() {
+            @Override
+            public Collection<? extends Edge> connect(StreetVertex sv, BikeRentalStationVertex v) {
+                return Arrays.asList(new StreetBikeRentalLink(sv, v), new StreetBikeRentalLink(v,
+                        sv));
+            }
+        });
         return request;
     }
 
@@ -156,7 +168,7 @@ public class NetworkLinkerLibrary {
 
 
     public DistanceLibrary getDistanceLibrary() {
-        return distanceLibrary ;
+        return distanceLibrary;
     }
 
 }
