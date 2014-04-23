@@ -20,7 +20,6 @@ import java.util.LinkedList;
 
 import org.opentripplanner.common.IterableLibrary;
 import org.opentripplanner.common.model.P2;
-import org.opentripplanner.gbannotation.BikeParkUnlinked;
 import org.opentripplanner.gbannotation.BikeRentalStationUnlinked;
 import org.opentripplanner.gbannotation.StopUnlinked;
 import org.opentripplanner.routing.core.RoutingRequest;
@@ -32,7 +31,6 @@ import org.opentripplanner.routing.edgetype.factory.FindMaxWalkDistances;
 import org.opentripplanner.routing.graph.Edge;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.routing.graph.Vertex;
-import org.opentripplanner.routing.vertextype.BikeParkVertex;
 import org.opentripplanner.routing.vertextype.BikeRentalStationVertex;
 import org.opentripplanner.routing.vertextype.TransitStop;
 import org.slf4j.Logger;
@@ -121,13 +119,6 @@ public class NetworkLinker {
                 BikeRentalStationVertex.class)) {
             if (!networkLinkerLibrary.connectVertexToStreets(brsv).getResult()) {
                 LOG.warn(graph.addBuilderAnnotation(new BikeRentalStationUnlinked(brsv)));
-            }
-        }
-
-        LOG.debug("Linking bike parks...");
-        for (BikeParkVertex bpv : IterableLibrary.filter(vertices, BikeParkVertex.class)) {
-            if (!networkLinkerLibrary.connectVertexToStreets(bpv).getResult()) {
-                LOG.warn(graph.addBuilderAnnotation(new BikeParkUnlinked(bpv)));
             }
         }
     }
