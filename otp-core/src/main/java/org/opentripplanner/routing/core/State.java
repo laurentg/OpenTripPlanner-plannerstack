@@ -115,9 +115,13 @@ public class State implements Cloneable {
         this.stateData.usingRentedBike = false;
         boolean parkAndRideEnabled = options.getModes().getCar() && options.getModes().getWalk();
         this.stateData.carParked = options.isArriveBy() && parkAndRideEnabled;
+        this.stateData.bikeParked = options.isArriveBy() && options.bikeParkAndRide;
         if (parkAndRideEnabled) {
             this.stateData.nonTransitMode = this.stateData.carParked ? TraverseMode.WALK
                     : TraverseMode.CAR;
+        } else if (options.bikeParkAndRide) {
+            this.stateData.nonTransitMode = this.stateData.bikeParked ? TraverseMode.WALK
+                    : TraverseMode.BICYCLE;
         }
         this.walkDistance = 0;
         this.time = timeSeconds * 1000;
@@ -261,6 +265,10 @@ public class State implements Cloneable {
     public boolean isCarParked() {
         return stateData.carParked;
     }
+    
+    public boolean isBikeParked() {
+        return stateData.bikeParked;
+    }
 
     /**
      * @return True if the state at vertex can be the end of path.
@@ -268,10 +276,20 @@ public class State implements Cloneable {
     public boolean isFinal() {
         boolean parkAndRide = stateData.opt.getModes().getCar()
                 && stateData.opt.getModes().getWalk();
-        if (stateData.opt.isArriveBy())
-            return !isBikeRenting() && !(parkAndRide && isCarParked());
-        else
-            return !isBikeRenting() && !(parkAndRide && !isCarParked());
+        boolean bikeParkAndRide = stateData.opt.bikeParkAndRide;
+        boolean bikeRentingOk = false;
+        boolean bikeParkAndRideOk = false;
+        boolean carParkAndRideOk = false;
+        if (stateData.opt.isArriveBy()) {
+            bikeRentingOk = !isBikeRenting();
+            bikeParkAndRideOk = !bikeParkAndRide || !isBikeParked();
+            carParkAndRideOk = !parkAndRide || !isCarParked();
+        } else {
+            bikeRentingOk = !isBikeRenting();
+            bikeParkAndRideOk = !bikeParkAndRide || isBikeParked();
+            carParkAndRideOk = !parkAndRide || isCarParked();
+        }
+        return bikeRentingOk && bikeParkAndRideOk && carParkAndRideOk;
     }
 
     public Stop getPreviousStop() {
@@ -307,6 +325,8 @@ public class State implements Cloneable {
         if (isBikeRenting() != other.isBikeRenting())
             return false;
         if (isCarParked() != other.isCarParked())
+            return false;
+        if (isBikeParked() != other.isBikeParked())
             return false;
 
         if (backEdge != other.getBackEdge() && ((backEdge instanceof PlainStreetEdge)
@@ -491,6 +511,7 @@ public class State implements Cloneable {
         // TODO Check if those two lines are needed:
         newState.stateData.usingRentedBike = stateData.usingRentedBike;
         newState.stateData.carParked = stateData.carParked;
+        newState.stateData.bikeParked = stateData.bikeParked;
         return newState;
     }
 
@@ -740,6 +761,8 @@ public class State implements Cloneable {
                     editor.setBikeRenting(!orig.isBikeRenting());
                 if (orig.isCarParked() != orig.getBackState().isCarParked())
                     editor.setCarParked(!orig.isCarParked());
+                if (orig.isBikeParked() != orig.getBackState().isBikeParked())
+                    editor.setBikeParked(!orig.isBikeParked());
 
                 editor.setNumBoardings(getNumBoardings() - orig.getNumBoardings());
 
