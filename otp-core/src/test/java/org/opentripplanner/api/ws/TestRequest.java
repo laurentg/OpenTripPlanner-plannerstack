@@ -15,9 +15,9 @@ package org.opentripplanner.api.ws;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.reset;
 
 import java.io.File;
 import java.io.IOException;
@@ -103,8 +103,8 @@ import org.opentripplanner.routing.graph.Vertex;
 import org.opentripplanner.routing.impl.RetryingPathServiceImpl;
 import org.opentripplanner.routing.impl.StreetVertexIndexServiceImpl;
 import org.opentripplanner.routing.impl.TravelingSalesmanPathService;
-import org.opentripplanner.routing.services.GraphService;
 import org.opentripplanner.routing.services.AlertPatchService;
+import org.opentripplanner.routing.services.GraphService;
 import org.opentripplanner.routing.spt.GraphPath;
 import org.opentripplanner.routing.vertextype.IntersectionVertex;
 import org.opentripplanner.routing.vertextype.PatternStopVertex;
@@ -280,7 +280,7 @@ class Context {
     }
 
     private void initBikeRental() {
-        BikeRentalStationService service = new BikeRentalStationService();
+        BikeRentalStationService service = graph.getService(BikeRentalStationService.class, true);
         BikeRentalStation station = new BikeRentalStation();
         station.x = -122.637634;
         station.y = 45.513084;
@@ -288,9 +288,7 @@ class Context {
         station.spacesAvailable = 4;
         station.id = "1";
         station.name = "bike rental station";
-
-        service.addStation(station);
-        graph.putService(BikeRentalStationService.class, service);
+        service.addBikeRentalStation(station);
     }
 
     private Graph makeSimpleGraph() {

@@ -20,8 +20,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.prefs.Preferences;
 
@@ -129,11 +129,7 @@ public class BikeRentalUpdater extends PollingGraphUpdater {
         updaterManager.executeBlocking(new GraphWriterRunnable() {
             @Override
             public void run(Graph graph) {
-                service = graph.getService(BikeRentalStationService.class);
-                if (service == null) {
-                    service = new BikeRentalStationService();
-                    graph.putService(BikeRentalStationService.class, service);
-                }
+                service = graph.getService(BikeRentalStationService.class, true);
             }
         });
     }
@@ -168,7 +164,7 @@ public class BikeRentalUpdater extends PollingGraphUpdater {
             Set<String> networks = new HashSet<String>(Arrays.asList(network));
             /* add any new stations and update bike counts for existing stations */
             for (BikeRentalStation station : stations) {
-                service.addStation(station);
+                service.addBikeRentalStation(station);
                 stationSet.add(station);
                 BikeRentalStationVertex vertex = verticesByStation.get(station);
                 if (vertex == null) {
@@ -196,7 +192,7 @@ public class BikeRentalUpdater extends PollingGraphUpdater {
                     graph.removeVertexAndEdges(vertex);
                 }
                 toRemove.add(station);
-                service.removeStation(station);
+                service.removeBikeRentalStation(station);
                 // TODO: need to unsplit any streets that were split
             }
             for (BikeRentalStation station : toRemove) {

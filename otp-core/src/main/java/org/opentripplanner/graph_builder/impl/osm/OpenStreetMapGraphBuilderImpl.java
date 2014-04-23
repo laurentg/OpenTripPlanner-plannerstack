@@ -844,8 +844,8 @@ public class OpenStreetMapGraphBuilderImpl implements GraphBuilder {
         private void processBikeRentalNodes() {
             LOG.info("Processing bike rental nodes...");
             int n = 0;
-            BikeRentalStationService bikeRentalService = new BikeRentalStationService();
-            graph.putService(BikeRentalStationService.class, bikeRentalService);
+            BikeRentalStationService bikeRentalService = graph.getService(
+                    BikeRentalStationService.class, true);
             for (OSMNode node : _bikeRentalNodes) {
                 n++;
                 String creativeName = wayPropertySet.getCreativeNameForWay(node);
@@ -881,7 +881,7 @@ public class OpenStreetMapGraphBuilderImpl implements GraphBuilder {
                 station.spacesAvailable = capacity / 2;
                 station.bikesAvailable = capacity - station.spacesAvailable;
                 station.realTimeData = false;
-                bikeRentalService.addStation(station);
+                bikeRentalService.addBikeRentalStation(station);
                 BikeRentalStationVertex stationVertex = new BikeRentalStationVertex(graph, station);
                 new RentABikeOnEdge(stationVertex, stationVertex, networkSet);
                 new RentABikeOffEdge(stationVertex, stationVertex, networkSet);
