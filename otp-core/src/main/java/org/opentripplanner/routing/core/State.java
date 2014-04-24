@@ -113,13 +113,14 @@ public class State implements Cloneable {
         this.stateData.opt = options;
         this.stateData.startTime = timeSeconds;
         this.stateData.usingRentedBike = false;
-        boolean parkAndRideEnabled = options.getModes().getCar() && options.getModes().getWalk();
-        this.stateData.carParked = options.isArriveBy() && parkAndRideEnabled;
-        this.stateData.bikeParked = options.isArriveBy() && options.bikeParkAndRide;
-        if (parkAndRideEnabled) {
-            this.stateData.nonTransitMode = this.stateData.carParked ? TraverseMode.WALK
-                    : TraverseMode.CAR;
-        } else if (options.bikeParkAndRide) {
+        /* If the itinerary is to begin with a car that is left for transit, the initial state of arriveBy searches is
+        with the car already "parked" and in WALK mode. Otherwise, we are in CAR mode and "unparked". */
+        if (options.parkAndRide || options.kissAndRide) {
+            this.stateData.carParked = options.isArriveBy();
+            this.stateData.nonTransitMode = this.stateData.carParked ? TraverseMode.WALK : TraverseMode.CAR;
+        }
+        if (options.bikeParkAndRide) {
+            this.stateData.bikeParked = options.isArriveBy();
             this.stateData.nonTransitMode = this.stateData.bikeParked ? TraverseMode.WALK
                     : TraverseMode.BICYCLE;
         }
@@ -274,22 +275,23 @@ public class State implements Cloneable {
      * @return True if the state at vertex can be the end of path.
      */
     public boolean isFinal() {
-        boolean parkAndRide = stateData.opt.getModes().getCar()
-                && stateData.opt.getModes().getWalk();
+        // When drive-to-transit is enabled, we need to check whether the car has been parked (or whether it has been picked up in reverse).
+        boolean checkPark = stateData.opt.parkAndRide || stateData.opt.kissAndRide;
         boolean bikeParkAndRide = stateData.opt.bikeParkAndRide;
-        boolean bikeRentingOk = false;
-        boolean bikeParkAndRideOk = false;
-        boolean carParkAndRideOk = false;
+        boolean bikeParkAndRideOk = true;
+        boolean carParkAndRideOk = true;
         if (stateData.opt.isArriveBy()) {
-            bikeRentingOk = !isBikeRenting();
-            bikeParkAndRideOk = !bikeParkAndRide || !isBikeParked();
-            carParkAndRideOk = !parkAndRide || !isCarParked();
+            if (bikeParkAndRide)
+                bikeParkAndRideOk = !isBikeParked();
+            if (checkPark)
+                carParkAndRideOk = !isCarParked();
         } else {
-            bikeRentingOk = !isBikeRenting();
-            bikeParkAndRideOk = !bikeParkAndRide || isBikeParked();
-            carParkAndRideOk = !parkAndRide || isCarParked();
+            if (bikeParkAndRide)
+                bikeParkAndRideOk = isBikeParked();
+            if (checkPark)
+                carParkAndRideOk = isCarParked();
         }
-        return bikeRentingOk && bikeParkAndRideOk && carParkAndRideOk;
+        return !isBikeRenting() && bikeParkAndRideOk && carParkAndRideOk;
     }
 
     public Stop getPreviousStop() {

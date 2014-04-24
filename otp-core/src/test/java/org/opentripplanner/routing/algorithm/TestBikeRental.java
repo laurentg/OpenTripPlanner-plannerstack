@@ -112,6 +112,7 @@ public class TestBikeRental extends TestCase {
         // now we succeed!
         options = new RoutingRequest(new TraverseModeSet("WALK,BICYCLE,TRANSIT"));
         options.setRoutingContext(graph, v1, v3);
+        options.allowBikeRental = true;
         tree = aStar.getShortestPathTree(options);
 
         path = tree.getPath(v3, false);

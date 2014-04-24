@@ -168,10 +168,12 @@ public class PlanGeneratorTest {
      * @return An array containing the generated GraphPath objects: forward, then backward, onboard.
      */
     private GraphPath[] buildPaths() {
-        // This set of requested traverse modes implies that bike rental is a possibility.
+        // This set of requested traverse modes are necessary for bike rental.
         RoutingRequest options = new RoutingRequest(new TraverseModeSet(
                 TraverseMode.WALK, TraverseMode.BICYCLE, TraverseMode.TRANSIT));
-
+        // Specically allow bike rental.
+        options.setAllowBikeRental(true);
+        
         Graph graph = new Graph();
 
         // Vertices for leg 0

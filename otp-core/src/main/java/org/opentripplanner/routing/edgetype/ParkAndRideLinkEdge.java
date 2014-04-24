@@ -90,6 +90,10 @@ public class ParkAndRideLinkEdge extends Edge {
 
     @Override
     public State traverse(State s0) {
+        // Do not enter park and ride mechanism if it's not activated in the routing request.
+        if (!s0.getOptions().parkAndRide) {
+            return null;
+        }
         Edge backEdge = s0.getBackEdge();
         boolean back = s0.getOptions().isArriveBy();
         // If we are exiting (or entering-backward), check if we

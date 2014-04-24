@@ -61,6 +61,7 @@ import org.opentripplanner.api.model.transit.RouteDataList;
 import org.opentripplanner.api.model.transit.RouteList;
 import org.opentripplanner.api.model.transit.StopList;
 import org.opentripplanner.api.model.transit.StopTimeList;
+import org.opentripplanner.api.parameter.QualifiedModeSetSequence;
 import org.opentripplanner.api.ws.internals.Components;
 import org.opentripplanner.api.ws.internals.GraphInternals;
 import org.opentripplanner.api.ws.services.MetadataService;
@@ -1056,7 +1057,7 @@ public class TestRequest extends TestCase {
         TestPlanner planner = new TestPlanner("portland", "45.440947,-122.837645", "45.463966,-122.755822");
         planner.setMaxWalkDistance(Arrays.asList(Double.POSITIVE_INFINITY));
         planner.setWalkReluctance(Arrays.asList(1.0));
-        planner.setModes(Arrays.asList(new TraverseModeSet("BICYCLE,TRANSIT")));
+        planner.setModes(Arrays.asList(new QualifiedModeSetSequence("BICYCLE,TRANSIT")));
 
         Response response = planner.getItineraries();
         Itinerary itinerary = response.getPlan().itinerary.get(0);
@@ -1182,7 +1183,7 @@ public class TestRequest extends TestCase {
             this.walkReluctance = Arrays.asList(8.0);
             this.walkSpeed = Arrays.asList(1.33);
             this.optimize = Arrays.asList(OptimizeType.QUICK);
-            this.modes = Arrays.asList(new TraverseModeSet("WALK,TRANSIT"));
+            this.modes = Arrays.asList(new QualifiedModeSetSequence("WALK,TRANSIT"));
             this.numItineraries = Arrays.asList(1);
             this.transferPenalty = Arrays.asList(0);
             this.nonpreferredTransferPenalty = Arrays.asList(180);
@@ -1198,7 +1199,7 @@ public class TestRequest extends TestCase {
 
         public TestPlanner(String routerId, String v1, String v2, List<String> intermediates) {
             this(routerId, v1, v2);
-            this.modes = Arrays.asList(new TraverseModeSet("WALK"));
+            this.modes = Arrays.asList(new QualifiedModeSetSequence("WALK"));
             this.intermediatePlaces = intermediates;
             TravelingSalesmanPathService tsp = new TravelingSalesmanPathService();
             tsp.setChainedPathService(Context.getInstance().pathService);
@@ -1238,7 +1239,7 @@ public class TestRequest extends TestCase {
             this.walkReluctance = walkReluctance;
         }
 
-        public void setModes(List<TraverseModeSet> modes) {
+        public void setModes(List<QualifiedModeSetSequence> modes) {
             this.modes = modes;
         }
 

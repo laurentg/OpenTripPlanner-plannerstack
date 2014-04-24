@@ -81,6 +81,7 @@ public class TestParkAndRide extends TestCase {
 
         // or CAR+WALK (no P+R).
         options = new RoutingRequest(new TraverseModeSet("WALK,CAR"));
+        options.setParkAndRide(true);
         options.freezeTraverseMode();
         options.setRoutingContext(graph, A, C);
         tree = aStar.getShortestPathTree(options);
@@ -114,6 +115,7 @@ public class TestParkAndRide extends TestCase {
         // But we can go from A to C with CAR+WALK mode using P+R.
         options = new RoutingRequest(new TraverseModeSet("WALK,CAR"));
         options.setRoutingContext(graph, A, C);
+        options.setParkAndRide(true);
         tree = aStar.getShortestPathTree(options);
         path = tree.getPath(C, false);
         assertNotNull(path);

@@ -386,8 +386,15 @@ public class RoutingRequest implements Cloneable, Serializable {
 	private double softWalkPenalty = 60.0; // a jump in cost when stepping over the walking limit
 	private double softWalkOverageRate = 5.0; // a jump in cost for every meter over the walking limit
 
+    /*
+     * Additional flags affecting mode transitions. This is a temporary solution, as it only covers
+     * parking and rental at the beginning of the trip.
+     */
+    public boolean allowBikeRental = false;
     public boolean bikeParkAndRide = false;
-	
+    public boolean parkAndRide = false;
+    public boolean kissAndRide = false;
+
     /* CONSTRUCTORS */
 
     /** Constructor for options; modes defaults to walk and transit */
