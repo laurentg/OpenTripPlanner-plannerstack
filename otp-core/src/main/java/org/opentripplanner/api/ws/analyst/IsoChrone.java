@@ -196,7 +196,7 @@ public class IsoChrone extends RoutingResource {
             sptRequestA.worstTime = sptRequestA.dateTime + Math.round(walkInMin * 1.3 * 60);
         }
         // set the switch-time for shed/area calculation, i.e. to decide if the hull is calculated based on points or on edges
-        TraverseModeSet modes = sptRequestA.modes;
+        TraverseModeSet modes = sptRequestA.getModes();
         LOG.debug("mode(s): " + modes);
         if ((modes.contains(TraverseMode.TRANSIT)) || (modes.contains(TraverseMode.BUSISH))
                 || (modes.contains(TraverseMode.TRAINISH))) {

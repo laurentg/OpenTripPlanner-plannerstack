@@ -45,31 +45,33 @@ public class QualifiedModeSetSequence {
      */
     public void applyToRequest(RoutingRequest req) {
         /* Start with an empty mode set. */
-        req.modes = new TraverseModeSet();
+        TraverseModeSet modes = new TraverseModeSet();
         /* Use only the first set of qualified modes for now. */
-        if (sets.isEmpty()) return;
-        Set<QualifiedMode> qModes = sets.get(0);
-        // First, copy over all the modes
-        for (QualifiedMode qMode : qModes) {
-            req.modes.setMode(qMode.mode, true);
-        }
-        for (QualifiedMode qMode : qModes) {
-            if (qMode.mode == TraverseMode.BICYCLE) {
-                if (qMode.qualifiers.contains(Qualifier.RENT)) {
-                    req.allowBikeRental = true;
+        if (!sets.isEmpty()) {
+            Set<QualifiedMode> qModes = sets.get(0);
+            // First, copy over all the modes
+            for (QualifiedMode qMode : qModes) {
+                modes.setMode(qMode.mode, true);
+            }
+            for (QualifiedMode qMode : qModes) {
+                if (qMode.mode == TraverseMode.BICYCLE) {
+                    if (qMode.qualifiers.contains(Qualifier.RENT)) {
+                        req.allowBikeRental = true;
+                    }
+                    if (qMode.qualifiers.contains(Qualifier.PARK)) {
+                        req.bikeParkAndRide = true;
+                    }
                 }
-                if (qMode.qualifiers.contains(Qualifier.PARK)) {
-                    req.bikeParkAndRide = true;
+                if (qMode.mode == TraverseMode.CAR) {
+                    if (qMode.qualifiers.contains(Qualifier.PARK)) {
+                        req.parkAndRide = true;
+                    } else {
+                        req.kissAndRide = true;
+                    }
                 }
             }
-            if (qMode.mode == TraverseMode.CAR) {
-                if (qMode.qualifiers.contains(Qualifier.PARK)) {
-                    req.parkAndRide = true;
-                } else {
-                    req.kissAndRide = true;
-                }
-            }
         }
+        req.setModes(modes);
     }
 
 }

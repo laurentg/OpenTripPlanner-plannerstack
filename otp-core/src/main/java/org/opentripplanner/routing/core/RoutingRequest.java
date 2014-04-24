@@ -101,7 +101,7 @@ public class RoutingRequest implements Cloneable, Serializable {
     public double maxWeight = Double.MAX_VALUE;
 
     /** The set of TraverseModes that a user is willing to use. Defaults to WALK | TRANSIT. */
-    public TraverseModeSet modes = new TraverseModeSet("TRANSIT,WALK"); // defaults in constructor
+    private TraverseModeSet modes = new TraverseModeSet("TRANSIT,WALK"); // defaults in constructor
 
     /** The set of characteristics that the user wants to optimize for -- defaults to QUICK, or optimize for transit time. */
     public OptimizeType optimize = OptimizeType.QUICK;
@@ -397,7 +397,7 @@ public class RoutingRequest implements Cloneable, Serializable {
         bikeSpeed = 5; // 5 m/s, ~11 mph, a random bicycling speed
         // http://en.wikipedia.org/wiki/Speed_limit
         carSpeed = 40; // 40 m/s, 144 km/h, above the maximum (finite) driving speed limit worldwide
-        setModes(new TraverseModeSet(new TraverseMode[] { TraverseMode.WALK, TraverseMode.TRANSIT }));
+        setModes(new TraverseModeSet(TraverseMode.WALK, TraverseMode.TRANSIT));
         bikeWalkingOptions = this;
 
         // So that they are never null.
