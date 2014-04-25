@@ -73,15 +73,14 @@ public class TestParkAndRide extends TestCase {
         GenericAStar aStar = new GenericAStar();
 
         // It is impossible to get from A to C in WALK mode,
-        RoutingRequest options = new RoutingRequest(new TraverseModeSet("WALK"));
+        RoutingRequest options = new RoutingRequest("WALK");
         options.setRoutingContext(graph, A, C);
         ShortestPathTree tree = aStar.getShortestPathTree(options);
         GraphPath path = tree.getPath(C, false);
         assertNull(path);
 
         // or CAR+WALK (no P+R).
-        options = new RoutingRequest(new TraverseModeSet("WALK,CAR"));
-        options.setParkAndRide(true);
+        options = new RoutingRequest("WALK,CAR_PARK");
         options.freezeTraverseMode();
         options.setRoutingContext(graph, A, C);
         tree = aStar.getShortestPathTree(options);
@@ -97,7 +96,7 @@ public class TestParkAndRide extends TestCase {
 
         // But it is still impossible to get from A to C by WALK only
         // (AB is CAR only).
-        options = new RoutingRequest(new TraverseModeSet("WALK"));
+        options = new RoutingRequest("WALK");
         options.freezeTraverseMode();
         options.setRoutingContext(graph, A, C);
         tree = aStar.getShortestPathTree(options);
@@ -105,7 +104,7 @@ public class TestParkAndRide extends TestCase {
         assertNull(path);
         
         // Or CAR only (BC is WALK only).
-        options = new RoutingRequest(new TraverseModeSet("CAR"));
+        options = new RoutingRequest("CAR");
         options.freezeTraverseMode();
         options.setRoutingContext(graph, A, C);
         tree = aStar.getShortestPathTree(options);
@@ -113,7 +112,7 @@ public class TestParkAndRide extends TestCase {
         assertNull(path);
 
         // But we can go from A to C with CAR+WALK mode using P+R.
-        options = new RoutingRequest(new TraverseModeSet("WALK,CAR"));
+        options = new RoutingRequest("WALK,CAR_PARK");
         options.setRoutingContext(graph, A, C);
         options.setParkAndRide(true);
         tree = aStar.getShortestPathTree(options);

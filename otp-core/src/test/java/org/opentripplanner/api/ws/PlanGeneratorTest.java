@@ -58,7 +58,6 @@ import org.opentripplanner.routing.core.ServiceDay;
 import org.opentripplanner.routing.core.ServiceIdToNumberService;
 import org.opentripplanner.routing.core.State;
 import org.opentripplanner.routing.core.TraverseMode;
-import org.opentripplanner.routing.core.TraverseModeSet;
 import org.opentripplanner.routing.core.WrappedCurrency;
 import org.opentripplanner.routing.edgetype.AreaEdge;
 import org.opentripplanner.routing.edgetype.AreaEdgeList;
@@ -168,9 +167,8 @@ public class PlanGeneratorTest {
      * @return An array containing the generated GraphPath objects: forward, then backward, onboard.
      */
     private GraphPath[] buildPaths() {
-        // This set of requested traverse modes are necessary for bike rental.
-        RoutingRequest options = new RoutingRequest(new TraverseModeSet(
-                TraverseMode.WALK, TraverseMode.BICYCLE, TraverseMode.TRANSIT));
+        // This set of requested traverse modes implies that bike rental is a possibility.
+        RoutingRequest options = new RoutingRequest("WALK,BICYCLE_RENT,TRANSIT");
         // Specically allow bike rental.
         options.setAllowBikeRental(true);
         

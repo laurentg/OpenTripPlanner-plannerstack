@@ -30,6 +30,7 @@ import lombok.Setter;
 import org.onebusaway.gtfs.model.AgencyAndId;
 import org.onebusaway.gtfs.model.Route;
 import org.onebusaway.gtfs.model.Trip;
+import org.opentripplanner.api.parameter.QualifiedModeSetSequence;
 import org.opentripplanner.common.MavenVersion;
 import org.opentripplanner.common.model.GenericLocation;
 import org.opentripplanner.common.model.NamedPlace;
@@ -396,7 +397,7 @@ public class RoutingRequest implements Cloneable, Serializable {
     public boolean kissAndRide = false;
 
     /** Weight multiplier for pre-transit travel when using drive-to-transit (park and ride or kiss and ride). */
-    public double firstLegReluctance = 3;
+    public double firstLegReluctance = 5;
 
     /* CONSTRUCTORS */
 
@@ -418,6 +419,16 @@ public class RoutingRequest implements Cloneable, Serializable {
     public RoutingRequest(TraverseModeSet modes) {
         this();
         this.setModes(modes);
+    }
+
+    public RoutingRequest(QualifiedModeSetSequence qmodes) {
+        this();
+        qmodes.applyToRequest(this);
+    }
+
+    public RoutingRequest(String qmodes) {
+        this();
+        new QualifiedModeSetSequence(qmodes).applyToRequest(this);
     }
 
     public RoutingRequest(TraverseMode mode) {
