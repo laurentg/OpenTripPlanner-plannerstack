@@ -14,6 +14,7 @@
 package org.opentripplanner.updater.bike_park;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.prefs.Preferences;
 
@@ -39,6 +40,9 @@ public class KmlBikeParkDataSource implements BikeParkDataSource, PreferencesCon
     @Setter
     private String url;
 
+    @Setter
+    private String namePrefix = null;
+
     private XmlDataListDownloader<BikePark> xmlDownloader;
 
     private List<BikePark> bikeParks;
@@ -63,8 +67,9 @@ public class KmlBikeParkDataSource implements BikeParkDataSource, PreferencesCon
                 String[] coords = attributes.get("Point").trim().split(",");
                 bikePark.x = Double.parseDouble(coords[0]);
                 bikePark.y = Double.parseDouble(coords[1]);
-                // There is no ID in KML? Assume unique names.
-                bikePark.id = bikePark.name.replace(" ", "_");
+                // There is no ID in KML, assume unique names and location.
+                bikePark.id = String.format(Locale.US, "%s[%.3f-%.3f]",
+                        bikePark.name.replace(" ", "_"), bikePark.x, bikePark.y);
                 return bikePark;
             }
         });
@@ -104,5 +109,6 @@ public class KmlBikeParkDataSource implements BikeParkDataSource, PreferencesCon
         if (url == null)
             throw new IllegalArgumentException("Missing mandatory 'url' configuration.");
         setUrl(url);
+        setNamePrefix(preferences.get("namePrefix", null));
     }
 }

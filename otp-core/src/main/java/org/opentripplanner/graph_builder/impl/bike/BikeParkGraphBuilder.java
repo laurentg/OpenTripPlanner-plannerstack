@@ -39,9 +39,6 @@ public class BikeParkGraphBuilder implements GraphBuilder {
     @Setter
     private BikeParkDataSource dataSource;
     
-    @Setter
-    private String namePrefix;
-
     @Override
     public void buildGraph(Graph graph, HashMap<Class<?>, Object> extra) {
 
@@ -55,8 +52,6 @@ public class BikeParkGraphBuilder implements GraphBuilder {
         Collection<BikePark> bikeParks = dataSource.getBikeParks();
 
         for (BikePark bikePark : bikeParks) {
-            if (namePrefix != null)
-                bikePark.name = namePrefix + bikePark.name;
             service.addBikePark(bikePark);
             BikeParkVertex bikeParkVertex = new BikeParkVertex(graph, bikePark);
             new BikeParkEdge(bikeParkVertex);
