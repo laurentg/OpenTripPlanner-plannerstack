@@ -32,13 +32,17 @@ import org.opentripplanner.updater.bike_park.BikeParkDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * This graph builder allow one to statically build bike park using the same source as the dynamic
+ * bike park updater.
+ */
 public class BikeParkGraphBuilder implements GraphBuilder {
 
     private static Logger LOG = LoggerFactory.getLogger(BikeParkGraphBuilder.class);
 
     @Setter
     private BikeParkDataSource dataSource;
-    
+
     @Override
     public void buildGraph(Graph graph, HashMap<Class<?>, Object> extra) {
 
