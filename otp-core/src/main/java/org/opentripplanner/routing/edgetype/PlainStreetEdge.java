@@ -410,6 +410,15 @@ public class PlainStreetEdge extends StreetEdge implements Cloneable {
             s1.incrementWalkDistance(length);
         }
         
+        if (options.kissAndRide || options.parkAndRide) {
+            // On the pre-kiss/pre-park leg, make both walking and driving bad relative to transit.
+            if (options.arriveBy) {
+                if ( ! s0.isCarParked()) weight *= options.firstLegReluctance;
+            } else {
+                if ( ! s0.isEverBoarded()) weight *= options.firstLegReluctance;
+            }
+        }
+
         // apply strategy for avoiding walking too far, either soft or hard.
         if (s1.weHaveWalkedTooFar(options)) {
 
