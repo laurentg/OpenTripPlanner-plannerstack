@@ -39,6 +39,9 @@ public class GenericKmlBikeRentalDataSource extends GenericXmlBikeRentalDataSour
     private String namePrefix = null;
 
     private Set<String> networks = null;
+    
+    @Setter
+    private boolean allowDropoff = true;
 
     /**
      * @param networks A network, or a comma-separated list of networks, to set to all stations from
@@ -76,6 +79,7 @@ public class GenericKmlBikeRentalDataSource extends GenericXmlBikeRentalDataSour
         brStation.bikesAvailable = 1; // Unknown, always 1
         brStation.spacesAvailable = 1; // Unknown, always 1
         brStation.networks = networks;
+        brStation.allowDropoff = allowDropoff;
         return brStation;
     }
 

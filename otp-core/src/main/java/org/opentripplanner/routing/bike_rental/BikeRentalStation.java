@@ -38,6 +38,9 @@ public class BikeRentalStation implements Serializable {
     @XmlAttribute
     @JsonSerialize
     public int spacesAvailable = Integer.MAX_VALUE;
+    @XmlAttribute
+    @JsonSerialize
+    public boolean allowDropoff = true;
     
     /**
      * Whether this station is static (usually coming from OSM data) or a real-time source. If no real-time data, users should take
