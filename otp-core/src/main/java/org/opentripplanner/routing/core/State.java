@@ -531,6 +531,7 @@ public class State implements Cloneable {
         newState.stateData.usingRentedBike = stateData.usingRentedBike;
         newState.stateData.carParked = stateData.carParked;
         newState.stateData.bikeParked = stateData.bikeParked;
+        newState.stateData.nonTransitMode = stateData.nonTransitMode;
         return newState;
     }
 
@@ -743,9 +744,9 @@ public class State implements Cloneable {
 
                     ret = ((TransitBoardAlight) edge).traverse(ret, orig.getBackState().getTimeSeconds());
                     newInitialWaitTime = ret.stateData.initialWaitTime;
-                }
-                else                   
+                } else {
                     ret = edge.traverse(ret);
+                }
 
                 if (ret == null) {
                     LOG.warn("Cannot reverse path at edge: " + edge +
