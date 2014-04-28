@@ -143,7 +143,11 @@ public class DefaultRemainingWeightHeuristic implements RemainingWeightHeuristic
             } else {
                 // assume that the best route is no more than 10 times better than
                 // the as-the-crow-flies flat base route.
-                return options.getStreetSpeedUpperBound() * 10;
+                // TODO Check this magic multiplier. 10 is a killer in term of
+                // performance, and for bike/walk mode does not seems to be
+                // necessary (safest street would never be 10 times longer than
+                // the shortest one?).
+                return options.getStreetSpeedUpperBound() * 2;
             }
         }
     }
