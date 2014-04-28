@@ -46,8 +46,8 @@ public class DefaultRemainingWeightHeuristic implements RemainingWeightHeuristic
     private double targetY;
 
     @Override
-    public void initialize(State s, Vertex target, long abortTime) {
-        this.options = s.getOptions();
+    public void initialize(RoutingRequest options, Vertex origin, Vertex target, long abortTime) {
+        this.options = options;
         this.useTransit = options.getModes().isTransit();
         this.maxSpeed = getMaxSpeed(options);
 

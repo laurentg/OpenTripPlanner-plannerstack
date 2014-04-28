@@ -317,7 +317,7 @@ public class TargetBound implements SearchTerminationStrategy, SkipTraverseResul
     public void reset() {}
 
     @Override
-    public void initialize(State s, Vertex target, long abortTime) {}
+    public void initialize(RoutingRequest options, Vertex origin, Vertex target, long abortTime) {}
 
     public double getTimeBoundFactor() {
         return timeBoundFactor;
