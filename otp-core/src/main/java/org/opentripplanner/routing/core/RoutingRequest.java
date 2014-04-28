@@ -392,6 +392,7 @@ public class RoutingRequest implements Cloneable, Serializable {
      * parking and rental at the beginning of the trip.
      */
     public boolean allowBikeRental = false;
+    public boolean endRentingBike = false;
     public boolean bikeParkAndRide = false;
     public boolean parkAndRide = false;
     public boolean kissAndRide = false;

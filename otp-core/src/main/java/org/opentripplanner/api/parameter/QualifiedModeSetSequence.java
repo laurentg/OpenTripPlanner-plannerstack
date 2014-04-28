@@ -48,12 +48,12 @@ public class QualifiedModeSetSequence {
         TraverseModeSet modes = new TraverseModeSet();
         /* Use only the first set of qualified modes for now. */
         if (!sets.isEmpty()) {
-            Set<QualifiedMode> qModes = sets.get(0);
+            Set<QualifiedMode> firstModes = sets.get(0);
             // First, copy over all the modes
-            for (QualifiedMode qMode : qModes) {
+            for (QualifiedMode qMode : firstModes) {
                 modes.setMode(qMode.mode, true);
             }
-            for (QualifiedMode qMode : qModes) {
+            for (QualifiedMode qMode : firstModes) {
                 if (qMode.mode == TraverseMode.BICYCLE) {
                     if (qMode.qualifiers.contains(Qualifier.RENT)) {
                         req.allowBikeRental = true;
@@ -67,6 +67,22 @@ public class QualifiedModeSetSequence {
                         req.parkAndRide = true;
                     } else {
                         req.kissAndRide = true;
+                    }
+                }
+            }
+            // If we have at least two set of modes,
+            // take the last one as final condition
+            if (sets.size() >= 2) {
+                Set<QualifiedMode> lastModes = sets.get(sets.size() - 1);
+                for (QualifiedMode qMode : lastModes) {
+                    if (qMode.mode == TraverseMode.BICYCLE) {
+                        if (qMode.qualifiers.contains(Qualifier.RENT)) {
+                            req.allowBikeRental = true;
+                            req.endRentingBike = true;
+                        }
+                    } else {
+                        throw new RuntimeException("Unsupported mode for end section: "
+                                + qMode.mode);
                     }
                 }
             }

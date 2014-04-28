@@ -82,14 +82,19 @@ public class StreetTransitLink extends Edge {
             // Forbid enter station in CAR mode
             return null;
         }
-        if (s0.getOptions().bikeParkAndRide && !s0.isBikeParked()) {
-            // Forbid taking your own bike in the station if bike P+R activated.
+        if (s0.isBikeRenting()) {
+            // Forbid taking a rented bike on any transit.
+            // TODO Check this condition, does this always make sense?
             return null;
         }
         // Do not check here whether transit modes are selected. A check for the presence of 
         // transit modes will instead be done in the following PreBoard edge.
         // This allows finding transit stops with walk-only options.
         StateEditor s1 = s0.edit(this);
+        if (s0.getOptions().bikeParkAndRide && !s0.isBikeParked()) {
+            // Forbid taking your own bike in the station if bike P+R activated.
+            return null;
+        }
         s1.incrementTimeInSeconds(transitStop.getStreetToStopTime() + 1);
         s1.incrementWeight(STL_TRAVERSE_COST + transitStop.getStreetToStopTime());
         s1.setBackMode(TraverseMode.LEG_SWITCH);

@@ -112,7 +112,6 @@ public class State implements Cloneable {
         // this should be harmless since reversed clones are only used when routing has finished
         this.stateData.opt = options;
         this.stateData.startTime = timeSeconds;
-        this.stateData.usingRentedBike = false;
         /* If the itinerary is to begin with a car that is left for transit, the initial state of arriveBy searches is
         with the car already "parked" and in WALK mode. Otherwise, we are in CAR mode and "unparked". */
         if (options.parkAndRide || options.kissAndRide) {
@@ -123,6 +122,12 @@ public class State implements Cloneable {
             this.stateData.bikeParked = options.isArriveBy();
             this.stateData.nonTransitMode = this.stateData.bikeParked ? TraverseMode.WALK
                     : TraverseMode.BICYCLE;
+        }
+        this.stateData.usingRentedBike = false;
+        if (options.allowBikeRental && options.endRentingBike && options.isArriveBy()) {
+            this.stateData.usingRentedBike = true;
+            // Used rental network set is null (catch-all) by default.
+            this.stateData.nonTransitMode = TraverseMode.BICYCLE;
         }
         this.walkDistance = 0;
         this.time = timeSeconds * 1000;
@@ -278,20 +283,32 @@ public class State implements Cloneable {
         // When drive-to-transit is enabled, we need to check whether the car has been parked (or whether it has been picked up in reverse).
         boolean checkPark = stateData.opt.parkAndRide || stateData.opt.kissAndRide;
         boolean bikeParkAndRide = stateData.opt.bikeParkAndRide;
+        boolean bikeRental = stateData.opt.allowBikeRental;
+        boolean endRentingBike = stateData.opt.endRentingBike;
         boolean bikeParkAndRideOk = true;
         boolean carParkAndRideOk = true;
+        boolean bikeRentalOk = true;
         if (stateData.opt.isArriveBy()) {
             if (bikeParkAndRide)
                 bikeParkAndRideOk = !isBikeParked();
             if (checkPark)
                 carParkAndRideOk = !isCarParked();
+            if (bikeRental) {
+                bikeRentalOk = !isBikeRenting();
+                // Mixing the two below would need to add multiple initial states -- TODO
+                if (endRentingBike)
+                    throw new UnsupportedOperationException("TODO Can't mix arrive by and endRentingBike");
+            }
         } else {
+            // TODO Relax the condition below, depend on multi-init-state
             if (bikeParkAndRide)
                 bikeParkAndRideOk = isBikeParked();
             if (checkPark)
                 carParkAndRideOk = isCarParked();
+            if (bikeRental)
+                bikeRentalOk = endRentingBike ? true : !isBikeRenting();
         }
-        return !isBikeRenting() && bikeParkAndRideOk && carParkAndRideOk;
+        return bikeRentalOk && bikeParkAndRideOk && carParkAndRideOk;
     }
 
     public Stop getPreviousStop() {
