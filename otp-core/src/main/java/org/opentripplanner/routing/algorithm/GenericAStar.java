@@ -124,8 +124,10 @@ public class GenericAStar implements SPTService { // maybe this should be wrappe
             options.rctx.debugOutput.timedOut = true;
             return null; // Search timed out
         }
-        State initialState = new State(options);
-        runState.spt.add(initialState);
+        Collection<State> initialStates = State.buildStates(options);
+        for (State initialState : initialStates) {
+            runState.spt.add(initialState);
+        }
 
         // Priority Queue.
         // NOTE(flamholz): the queue is self-resizing, so we initialize it to have 
@@ -136,7 +138,9 @@ public class GenericAStar implements SPTService { // maybe this should be wrappe
         int initialSize = runState.rctx.graph.getVertices().size();
         initialSize = (int) Math.ceil(2 * (Math.sqrt((double) initialSize + 1)));
         runState.pq = qFactory.create(initialSize);
-        runState.pq.insert(initialState, 0);
+        for (State initialState : initialStates) {
+            runState.pq.insert(initialState, 0);
+        }
 
 //        options = options.clone();
 //        /** max walk distance cannot be less than distances to nearest transit stops */

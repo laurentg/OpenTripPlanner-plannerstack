@@ -13,6 +13,7 @@
 
 package org.opentripplanner.routing.impl;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -155,7 +156,7 @@ public class MultiObjectivePathServiceImpl implements PathService {
             cutoff += options.getMaxWalkDistance() * options.walkReluctance;
             options.maxWeight = cutoff;
             
-            State origin = new State(options);
+            Collection<State> initialStates = State.buildStates(options);
             // (used to) initialize heuristic outside loop so table can be reused
             heuristic.initialize(options, originVertex, targetVertex, endTime);
             
@@ -164,7 +165,9 @@ public class MultiObjectivePathServiceImpl implements PathService {
             // reinitialize states for each retry
             HashMap<Vertex, List<State>> states = new HashMap<Vertex, List<State>>();
             pq.reset();
-            pq.insert(origin, 0);
+            for (State initialState : initialStates) {
+                pq.insert(initialState, 0);
+            }
             QUEUE: while ( ! pq.empty()) {
                 
                 if (System.currentTimeMillis() > endTime) {

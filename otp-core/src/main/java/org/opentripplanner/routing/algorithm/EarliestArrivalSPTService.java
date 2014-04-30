@@ -67,12 +67,13 @@ public class EarliestArrivalSPTService implements SPTService {
             
         // SPT cache does not look at routing request in SPT to perform lookup, 
         // so it's OK to construct with the local cloned one
-        ShortestPathTree spt = new EarliestArrivalShortestPathTree(options); 
-        State initialState = new State(options);
-        spt.add(initialState);
-
+        ShortestPathTree spt = new EarliestArrivalShortestPathTree(options);
         OTPPriorityQueue<State> pq = new BinHeap<State>();
-        pq.insert(initialState, 0);
+        Collection<State> initialStates = State.buildStates(options);
+        for (State initialState : initialStates) {
+            spt.add(initialState);
+            pq.insert(initialState, 0);
+        }
 
         while (!pq.empty()) {
             State u = pq.extract_min();
