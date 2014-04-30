@@ -22,6 +22,8 @@ import junit.framework.TestCase;
 import org.opentripplanner.common.geometry.GeometryUtils;
 import org.opentripplanner.routing.bike_rental.BikeRentalStation;
 import org.opentripplanner.routing.core.RoutingRequest;
+import org.opentripplanner.routing.core.State;
+import org.opentripplanner.routing.core.TraverseMode;
 import org.opentripplanner.routing.core.TraverseModeSet;
 import org.opentripplanner.routing.edgetype.PlainStreetEdge;
 import org.opentripplanner.routing.edgetype.RentABikeOffEdge;
@@ -116,5 +118,23 @@ public class TestBikeRental extends TestCase {
 
         path = tree.getPath(v3, false);
         assertNotNull(path);
+        State endState1 = tree.getState(v3);
+        assertFalse(endState1.isBikeRenting());
+        assertFalse(endState1.getNonTransitMode() == TraverseMode.WALK);
+        long time1 = endState1.getElapsedTimeSeconds();
+        
+        // Test ending with bike rental, which should be faster
+        // than dropping off your bike.
+        options = new RoutingRequest("BICYCLE_RENT,TRANSIT;BICYCLE_RENT");
+        options.setRoutingContext(graph, v1, v3);
+        tree = aStar.getShortestPathTree(options);
+
+        path = tree.getPath(v3, false);
+        assertNotNull(path);
+        State endState2 = tree.getState(v3);
+        assertTrue(endState2.isBikeRenting());
+        assertTrue(endState2.getNonTransitMode() == TraverseMode.BICYCLE);
+        long time2 = endState2.getElapsedTimeSeconds();
+        assertTrue(time2 <= time1);
     }
 }

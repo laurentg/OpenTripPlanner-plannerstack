@@ -19,6 +19,7 @@ import org.opentripplanner.common.geometry.GeometryUtils;
 import org.opentripplanner.routing.bike_park.BikePark;
 import org.opentripplanner.routing.core.RoutingRequest;
 import org.opentripplanner.routing.core.State;
+import org.opentripplanner.routing.core.TraverseMode;
 import org.opentripplanner.routing.core.TraverseModeSet;
 import org.opentripplanner.routing.edgetype.BikeParkEdge;
 import org.opentripplanner.routing.edgetype.ParkAndRideEdge;
@@ -131,7 +132,12 @@ public class TestParkAndRide extends TestCase {
         options.setRoutingContext(graph, B, D);
         ShortestPathTree tree = aStar.getShortestPathTree(options);
         GraphPath path = tree.getPath(D, false);
-        assertNull(path);
+        // Note: the assertions below depends on allowing ending with bike in bike P+R mode
+        assertNotNull(path);
+        State s = tree.getState(D);
+        assertFalse(s.isBikeParked());
+        // Final state is bicycling your own bike.
+        assertTrue(s.getNonTransitMode() == TraverseMode.BICYCLE);
 
         // So we add a bike P+R at C.
         BikePark bpc = new BikePark();
@@ -156,7 +162,7 @@ public class TestParkAndRide extends TestCase {
         tree = aStar.getShortestPathTree(options);
         path = tree.getPath(D, false);
         assertNotNull(path);
-        State s = tree.getState(D);
+        s = tree.getState(D);
         assertFalse(s.isBikeParked());
         assertTrue(s.isBackWalkingBike());
 
