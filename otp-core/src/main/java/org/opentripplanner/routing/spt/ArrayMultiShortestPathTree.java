@@ -21,15 +21,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.opentripplanner.common.MavenVersion;
-import org.opentripplanner.routing.core.State;
 import org.opentripplanner.routing.core.RoutingRequest;
+import org.opentripplanner.routing.core.State;
 import org.opentripplanner.routing.graph.Vertex;
 
 /** Seems to only be used by Raptor. */
 public class ArrayMultiShortestPathTree extends AbstractShortestPathTree {
-
-    private static final long serialVersionUID = MavenVersion.VERSION.getUID();
 
     public static final ShortestPathTreeFactory FACTORY = new FactoryImpl();
 
