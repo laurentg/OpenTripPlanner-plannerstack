@@ -147,7 +147,7 @@ public class DefaultRemainingWeightHeuristic implements RemainingWeightHeuristic
                 // performance, and for bike/walk mode does not seems to be
                 // necessary (safest street would never be 10 times longer than
                 // the shortest one?).
-                return options.getStreetSpeedUpperBound() * 2;
+                return options.getStreetSpeedUpperBound();
             }
         }
     }
