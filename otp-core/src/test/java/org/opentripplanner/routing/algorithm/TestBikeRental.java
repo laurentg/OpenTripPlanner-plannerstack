@@ -111,8 +111,8 @@ public class TestBikeRental extends TestCase {
         new RentABikeOnEdge(stationVertex2, stationVertex2, networks);
         new RentABikeOffEdge(stationVertex2, stationVertex2, networks);
 
-        // now we succeed!
-        options = new RoutingRequest("BICYCLE_RENT,TRANSIT");
+        // now we succeed! renting and dropping a bike.
+        options = new RoutingRequest("WALK,BICYCLE_RENT,TRANSIT");
         options.setRoutingContext(graph, v1, v3);
         tree = aStar.getShortestPathTree(options);
 
@@ -120,12 +120,12 @@ public class TestBikeRental extends TestCase {
         assertNotNull(path);
         State endState1 = tree.getState(v3);
         assertFalse(endState1.isBikeRenting());
-        assertFalse(endState1.getNonTransitMode() == TraverseMode.WALK);
+        assertTrue(endState1.getNonTransitMode() == TraverseMode.WALK);
         long time1 = endState1.getElapsedTimeSeconds();
         
         // Test ending with bike rental, which should be faster
         // than dropping off your bike.
-        options = new RoutingRequest("BICYCLE_RENT,TRANSIT;BICYCLE_RENT");
+        options = new RoutingRequest("WALK,BICYCLE_RENT,TRANSIT;BICYCLE_RENT");
         options.setRoutingContext(graph, v1, v3);
         tree = aStar.getShortestPathTree(options);
 
