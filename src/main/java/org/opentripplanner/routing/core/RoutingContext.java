@@ -16,6 +16,7 @@ package org.opentripplanner.routing.core;
 import com.google.common.collect.Iterables;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.LineString;
+
 import org.onebusaway.gtfs.model.AgencyAndId;
 import org.onebusaway.gtfs.model.Stop;
 import org.onebusaway.gtfs.model.calendar.ServiceDate;
@@ -52,6 +53,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -127,6 +129,8 @@ public class RoutingContext implements Cloneable {
     /** Indicates that the search timed out or was otherwise aborted. */
     public boolean aborted;
     
+    private List<Vertex> temporaryVertices = new ArrayList<>();
+
     /* CONSTRUCTORS */
 
     /**
@@ -413,6 +417,10 @@ public class RoutingContext implements Cloneable {
         return true;
     }
 
+    public void addTemporaryVertex(Vertex v) {
+        temporaryVertices.add(v);
+    }
+
     /**
      * Tear down this routing context, removing any temporary edges.
      * 
@@ -425,6 +433,8 @@ public class RoutingContext implements Cloneable {
         if (target != null)
             nRemoved += target.removeTemporaryEdges();
         for (Vertex v : intermediateVertices)
+            nRemoved += v.removeTemporaryEdges();
+        for (Vertex v : temporaryVertices)
             nRemoved += v.removeTemporaryEdges();
         return nRemoved;
     }
