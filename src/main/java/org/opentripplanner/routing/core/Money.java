@@ -69,7 +69,7 @@ public class Money implements Comparable<Money> {
         this.currency = new WrappedCurrency(currency);
     }
     
-    public void setCurrency(WrappedCurrency currency) {
+    public void setWrappedCurrency(WrappedCurrency currency) {
         this.currency = currency;
     }
 
