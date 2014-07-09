@@ -22,6 +22,8 @@ import org.opentripplanner.routing.edgetype.StreetEdge;
 import org.opentripplanner.routing.graph.Edge;
 import org.opentripplanner.routing.graph.Vertex;
 import org.opentripplanner.routing.location.StreetLocation;
+import org.opentripplanner.routing.rrrr.RrrrTransitStop;
+import org.opentripplanner.routing.rrrr.RrrrTransitStopBoarded;
 import org.opentripplanner.routing.vertextype.BikeRentalStationVertex;
 import org.opentripplanner.routing.vertextype.OffboardVertex;
 import org.opentripplanner.routing.vertextype.OnboardVertex;
@@ -100,9 +102,9 @@ public class BasicPathParser extends PathParser {
                 return StreetEdge.CLASS_OTHERPATH;
             }
         }
-        if (v instanceof OnboardVertex)
+        if (v instanceof OnboardVertex || v instanceof RrrrTransitStopBoarded)
             return TRANSIT;
-        if (v instanceof OffboardVertex)
+        if (v instanceof OffboardVertex || v instanceof RrrrTransitStop)
             return STATION;
         if (v instanceof BikeRentalStationVertex || v instanceof ParkAndRideVertex)
             return StreetEdge.CLASS_OTHERPATH;

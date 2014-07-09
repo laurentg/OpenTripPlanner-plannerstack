@@ -127,6 +127,10 @@ public class CommandLineParameters {
             description = "use an algorithm tailored for long-distance routing")
     boolean longDistance = false;
 
+    @Parameter( names = { "--rrrr" },
+            description = "use RRRR as transit router")
+    boolean useRrrr = false;
+
     @Parameter( names = { "-p", "--port"}, validateWith = AvailablePort.class, 
     description = "server port")
     Integer port;

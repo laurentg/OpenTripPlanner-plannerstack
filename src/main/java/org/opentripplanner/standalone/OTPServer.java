@@ -20,6 +20,7 @@ import org.opentripplanner.routing.algorithm.GenericAStar;
 import org.opentripplanner.routing.core.RoutingRequest;
 import org.opentripplanner.routing.impl.LongDistancePathService;
 import org.opentripplanner.routing.impl.RetryingPathServiceImpl;
+import org.opentripplanner.routing.rrrr.RrrrPathService;
 import org.opentripplanner.routing.services.GraphService;
 import org.opentripplanner.routing.services.PathService;
 import org.opentripplanner.routing.services.SPTService;
@@ -70,7 +71,10 @@ public class OTPServer {
         sptService = new GenericAStar();
 
         // Choose a PathService to wrap the SPTService, depending on expected maximum path lengths
-        if (params.longDistance) {
+        if (params.useRrrr) {
+            RrrrPathService pathService = new RrrrPathService(graphService, sptService);
+            this.pathService = pathService;
+        } else if (params.longDistance) {
             LongDistancePathService pathService = new LongDistancePathService(graphService, sptService);
             pathService.setTimeout(10);
             this.pathService = pathService;

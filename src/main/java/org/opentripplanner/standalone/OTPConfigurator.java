@@ -42,6 +42,7 @@ import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.routing.impl.DefaultFareServiceFactory;
 import org.opentripplanner.routing.impl.GraphServiceBeanImpl;
 import org.opentripplanner.routing.impl.GraphServiceImpl;
+import org.opentripplanner.routing.rrrr.RrrrGraphBuilder;
 import org.opentripplanner.routing.services.GraphService;
 import org.opentripplanner.updater.PropertiesPreferences;
 import org.opentripplanner.visualizer.GraphVisualizer;
@@ -119,6 +120,7 @@ public class OTPConfigurator {
         GraphBuilderTask graphBuilder = new GraphBuilderTask();
         List<File> gtfsFiles = Lists.newArrayList();
         List<File> osmFiles =  Lists.newArrayList();
+        File rrrrTimetable = null;
         File configFile = null;
         /* For now this is adding files from all directories listed, rather than building multiple graphs. */
         for (File dir : params.build) {
@@ -143,6 +145,10 @@ public class OTPConfigurator {
                         LOG.info("Found CONFIG file {}", file);
                         configFile = file;
                     }
+                    break;
+                case RRRR_TIMETABLE:
+                    LOG.info("Found RRRR timetable {}", file);
+                    rrrrTimetable = file;
                     break;
                 case OTHER:
                     LOG.debug("Skipping file '{}'", file);
@@ -206,6 +212,11 @@ public class OTPConfigurator {
             embeddedConfigBuilder.setPropertiesFile(configFile);
             graphBuilder.addGraphBuilder(embeddedConfigBuilder);
         }
+        if (rrrrTimetable != null) {
+            RrrrGraphBuilder rrrrGraphBuilder = new RrrrGraphBuilder();
+            rrrrGraphBuilder.setTimetableDatFile(rrrrTimetable);
+            graphBuilder.addGraphBuilder(rrrrGraphBuilder);
+        }
         if (params.elevation) {
             File cacheDirectory = new File(params.cacheDirectory, "ned");
             ElevationGridCoverageFactory gcf = new NEDGridCoverageFactoryImpl(cacheDirectory);
@@ -233,7 +244,7 @@ public class OTPConfigurator {
     }
 
     private static enum InputFileType {
-        GTFS, OSM, CONFIG, OTHER;
+        GTFS, OSM, CONFIG, RRRR_TIMETABLE, OTHER;
         public static InputFileType forFile(File file) {
             String name = file.getName();
             if (name.endsWith(".zip")) {
@@ -247,6 +258,7 @@ public class OTPConfigurator {
             if (name.endsWith(".pbf")) return OSM;
             if (name.endsWith(".osm")) return OSM;
             if (name.endsWith(".osm.xml")) return OSM;
+            if (name.equals("timetable.dat")) return RRRR_TIMETABLE;
             if (name.equals("Embed.properties")) return CONFIG;
             return OTHER;
         }
