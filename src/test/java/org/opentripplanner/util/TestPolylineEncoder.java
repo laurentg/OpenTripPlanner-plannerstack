@@ -35,4 +35,19 @@ public class TestPolylineEncoder extends TestCase {
         assertEquals(3, eplb.getLength());
         assertNull(eplb.getLevels());
     }
+
+    public void testDecoding() {
+        // The exact reverse test
+        final double MAX_DELTA = 1.1e-5;
+        EncodedPolylineBean eplb = new EncodedPolylineBean("o{sxFl}vaMjDpCf@\\", null, -1);
+        List<Coordinate> points = PolylineEncoder.decode(eplb);
+        assertEquals(3, points.size());
+        assertTrue(Math.abs(-73.85062 - points.get(0).x) < MAX_DELTA);
+        assertTrue(Math.abs(40.903125 - points.get(0).y) < MAX_DELTA);
+        assertTrue(Math.abs(-73.85136 - points.get(1).x) < MAX_DELTA);
+        assertTrue(Math.abs(40.902261 - points.get(1).y) < MAX_DELTA);
+        assertTrue(Math.abs(-73.85151 - points.get(2).x) < MAX_DELTA);
+        assertTrue(Math.abs(40.902066 - points.get(2).y) < MAX_DELTA);
+    }
+
 }
