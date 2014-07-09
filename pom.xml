@@ -599,6 +599,13 @@
             <version>4.7.1</version>
         </dependency>
 
+        <!-- ZMQ/JeroMQ (RRRR) -->
+        <dependency>
+            <groupId>org.zeromq</groupId>
+            <artifactId>jeromq</artifactId>
+            <version>0.3.4</version>
+        </dependency>
+
     </dependencies>
 
 </project>
