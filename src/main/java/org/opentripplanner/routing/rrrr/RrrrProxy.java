@@ -85,7 +85,7 @@ public class RrrrProxy {
                 throw new IOException("Received NULL data from RRRR");
             }
             String reply = new String(replyBuf, "UTF-8");
-            System.out.println("RECV:" + reply);
+            LOG.info("RRRR reply=" + reply);
 
             ObjectMapper mapper = new ObjectMapper();
             mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
