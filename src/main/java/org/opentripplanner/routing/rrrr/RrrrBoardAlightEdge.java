@@ -18,7 +18,6 @@ import org.onebusaway.gtfs.model.Trip;
 import org.opentripplanner.gtfs.GtfsLibrary;
 import org.opentripplanner.routing.core.State;
 import org.opentripplanner.routing.core.StateEditor;
-import org.opentripplanner.routing.core.TraverseMode;
 import org.opentripplanner.routing.edgetype.OnboardEdge;
 import org.opentripplanner.routing.graph.Edge;
 
@@ -60,13 +59,19 @@ public class RrrrBoardAlightEdge extends Edge implements OnboardEdge {
 
     @Override
     public State traverse(State s0) {
+        boolean arriveBy = s0.getOptions().isArriveBy();
+        boolean realBoarding = arriveBy ? !boarding : boarding;
         StateEditor se = s0.edit(this);
-        if (boarding) // TODO arriveBy
-            se.incrementNumBoardings();
         Route route = trip.getRoute();
-        if (boarding)
-            se.setBackMode(TraverseMode.LEG_SWITCH);
-        se.setTimeSeconds(timeSec);
+        if (realBoarding) {
+            se.incrementNumBoardings();
+        }
+        se.setBackMode(GtfsLibrary.getTraverseMode(trip.getRoute()));
+
+        long durationSec = timeSec - s0.getTimeSeconds();
+        if (arriveBy)
+            durationSec = -durationSec;
+        se.incrementTimeInSeconds((int) durationSec);
         se.incrementWeight(1); // A wormhole
         se.setRoute(route.getId());
         se.setTripId(trip.getId());

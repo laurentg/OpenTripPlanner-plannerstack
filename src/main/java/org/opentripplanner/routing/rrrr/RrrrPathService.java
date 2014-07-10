@@ -80,8 +80,6 @@ public class RrrrPathService implements PathService {
             LOG.error("PathService was passed a null routing request.");
             return null;
         }
-        if (options.isArriveBy())
-            throw new UnsupportedOperationException("TODO: arriveBy searches");
         if (options.getModes().getBicycle() || options.getModes().getCar())
             // TODO: select a fallback PathService for not supported modes
             throw new UnsupportedOperationException("Unsupported: CAR/BIKE searches");
@@ -90,11 +88,11 @@ public class RrrrPathService implements PathService {
         options.setRoutingContext(graph);
         options.rctx.pathParsers = new PathParser[] { new BasicPathParser() };
 
-        // GenericLocation from = options.getFrom();
         GenericLocation to = options.getTo();
 
         // Extract walk-only options
         RoutingRequest walkOptions = options.clone();
+        walkOptions.rctx = null; // Hack to force re-creation of RoutingContext
         walkOptions.setTo(null);
         walkOptions.setMode(TraverseMode.WALK);
         walkOptions.setArriveBy(false);
@@ -105,6 +103,7 @@ public class RrrrPathService implements PathService {
 
         double maxWeight = options.getMaxWalkDistance() / options.getWalkSpeed(); // approx.
         // Search for nearest from stop - TODO Select several
+        long searchBeginTime3 = System.currentTimeMillis();
         NearestTargetsSearchTerminationStrategy<TransitStop> nearestStops = new NearestTargetsSearchTerminationStrategy<TransitStop>(
                 TransitStop.class, maxWeight, 3);
         ShortestPathTree spt = sptService.getShortestPathTree(walkOptions, timeout, nearestStops);
@@ -129,15 +128,17 @@ public class RrrrPathService implements PathService {
             return null;
         }
         TransitStop toStop = nearestStops.getReachedTargetsList().get(0);
+        GraphPath lastWalkPath = spt.getPath(toStop, false);
+        LOG.info("Walk paths searches: {} msec", System.currentTimeMillis() - searchBeginTime3);
 
         // Adjust transit search
-        // TODO Should we also add boarding time?
-        options.setDateTime(new Date(options.getDateTime().getTime() + firstWalkPath.getDuration()
-                * 1000));
+        long adjustSec = (options.isArriveBy() ? -lastWalkPath.getDuration() : firstWalkPath
+                .getDuration());
+        Date originalDateTime = options.getDateTime();
+        options.setDateTime(new Date(options.getDateTime().getTime() + adjustSec * 1000));
         long searchBeginTime = System.currentTimeMillis();
-        LOG.info("BEGIN RRRR SEARCH");
         TripPlan transitPaths = planTransit(fromStop, toStop, options);
-        LOG.info("END RRRR SEARCH ({} msec)", System.currentTimeMillis() - searchBeginTime);
+        LOG.info("RRRR search: {} msec", System.currentTimeMillis() - searchBeginTime);
 
         // Create time-tunnels with the resulting itineraries
         for (Itinerary itinerary : transitPaths.itinerary) {
@@ -148,19 +149,19 @@ public class RrrrPathService implements PathService {
         options.rctx.pathParsers = new PathParser[] { new BasicPathParser() };
         // options.setMaxWalkDistance(Double.MAX_VALUE);
         options.rctx.remainingWeightHeuristic = new DefaultRemainingWeightHeuristic();
-        options.setMode(TraverseMode.WALK); // HACK HACK to disable transit
+        options.setMode(TraverseMode.WALK); // HACK to disable transit
+        options.setDateTime(originalDateTime);
 
         long searchBeginTime2 = System.currentTimeMillis();
-        LOG.info("BEGIN TIME TUNNEL SEARCH");
         spt = sptService.getShortestPathTree(options, timeoutSec);
-        LOG.info("END TIME TUNNEL SEARCH ({} msec)", System.currentTimeMillis() - searchBeginTime2);
+        LOG.info("Time-tunnel search: {} msec", System.currentTimeMillis() - searchBeginTime2);
 
         // Remove temporary stuff
         walkOptions.cleanup();
         if (spt == null)
             return null;
 
-        List<GraphPath> paths = spt.getPaths(options.getRoutingContext().target, false);
+        List<GraphPath> paths = spt.getPaths(options.getRoutingContext().target, true);
         // for (GraphPath path : paths)
         // path.dump();
         Collections.sort(paths, new PathWeightComparator());
