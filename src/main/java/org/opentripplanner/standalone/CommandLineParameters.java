@@ -148,8 +148,12 @@ public class CommandLineParameters {
     boolean server = false;
     
     @Parameter( names = { "-z", "--visualize"}, 
-    description = "open a debugging graph visualizer")
+            description = "open a debugging graph visualizer")
     boolean visualize;
+
+    @Parameter( names = { "--svgBikeSafety" },
+            description = "output bike safety values to a SVG file")
+    boolean svgBikeSafety;
 
     @Parameter( validateWith = ReadableFile.class, // the remaining parameters in one array
     description = "files") 

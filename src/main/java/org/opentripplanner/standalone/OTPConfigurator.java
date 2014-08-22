@@ -15,7 +15,6 @@ package org.opentripplanner.standalone;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.prefs.Preferences;
 import java.util.zip.ZipEntry;
@@ -33,6 +32,9 @@ import org.opentripplanner.graph_builder.impl.ned.ElevationGraphBuilderImpl;
 import org.opentripplanner.graph_builder.impl.ned.NEDGridCoverageFactoryImpl;
 import org.opentripplanner.graph_builder.impl.osm.DefaultWayPropertySetSource;
 import org.opentripplanner.graph_builder.impl.osm.OpenStreetMapGraphBuilderImpl;
+import org.opentripplanner.graph_builder.impl.svgview.SVGViewGraphBuilderImpl;
+import org.opentripplanner.graph_builder.impl.svgview.ScalarValueEdgeRenderer;
+import org.opentripplanner.graph_builder.impl.svgview.ScalarValueEdgeRenderer.ScalarValue;
 import org.opentripplanner.graph_builder.model.GtfsBundle;
 import org.opentripplanner.graph_builder.services.GraphBuilder;
 import org.opentripplanner.graph_builder.services.ned.ElevationGridCoverageFactory;
@@ -211,6 +213,13 @@ public class OTPConfigurator {
             ElevationGridCoverageFactory gcf = new NEDGridCoverageFactoryImpl(cacheDirectory);
             GraphBuilder elevationBuilder = new ElevationGraphBuilderImpl(gcf);
             graphBuilder.addGraphBuilder(elevationBuilder);
+        }
+        if (params.svgBikeSafety) {
+            SVGViewGraphBuilderImpl svgViewGraphBuilder = new SVGViewGraphBuilderImpl();
+            svgViewGraphBuilder.setEdgeRenderer(new ScalarValueEdgeRenderer(
+                    ScalarValue.BIKE_SAFETY, 20));
+            svgViewGraphBuilder.setSvgOutputFile("bike-safety.svg");
+            graphBuilder.addGraphBuilder(svgViewGraphBuilder);
         }
         graphBuilder.setSerializeGraph( ( ! params.inMemory ) || params.preFlight );
         return graphBuilder;
