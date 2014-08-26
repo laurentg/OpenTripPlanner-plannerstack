@@ -220,7 +220,7 @@ public class OTPConfigurator {
             SVGViewGraphBuilderImpl svgViewGraphBuilder = new SVGViewGraphBuilderImpl();
             svgViewGraphBuilder.setEdgeRenderer(new PermissionsEdgeRenderer());
             svgViewGraphBuilder.setVertexRenderer(new VertexColoredDotRenderer(true, true, true));
-            svgViewGraphBuilder.setSvgOutputFile("connectivity.svg");
+            svgViewGraphBuilder.setSvgOutputFilePrefix("connectivity");
             graphBuilder.addGraphBuilder(svgViewGraphBuilder);
         }
         if (params.svgBikeSafety) {
@@ -228,7 +228,7 @@ public class OTPConfigurator {
             svgViewGraphBuilder.setEdgeRenderer(new ScalarValueEdgeRenderer(
                     ScalarValue.BIKE_SAFETY, 20));
             svgViewGraphBuilder.setVertexRenderer(new VertexColoredDotRenderer(false, false, true));
-            svgViewGraphBuilder.setSvgOutputFile("bike-safety.svg");
+            svgViewGraphBuilder.setSvgOutputFilePrefix("bike-safety");
             graphBuilder.addGraphBuilder(svgViewGraphBuilder);
         }
         graphBuilder.setSerializeGraph( ( ! params.inMemory ) || params.preFlight );

@@ -31,32 +31,32 @@ import org.w3c.dom.Document;
 /**
  * Utility class to create a SVG file via a simple Paintable interface. Basically a convenient
  * wrapper around Batik to prevent dependency-leakage to some other part of the code.
- *
+ * 
  * @author laurent
  */
 public class SVGPainter {
-
-    public interface Paintable {
-        public abstract Dimension paint(Graphics2D graphics);
-    }
 
     private static final Logger LOG = LoggerFactory.getLogger(SVGPainter.class);
 
     private File svgOutputFile;
 
-    private Paintable painted;
+    private SVGGraphics2D svgGraphics;
 
-    public SVGPainter(File svgOutputFile, Paintable painted) {
+    private Dimension canvasSize;
+
+    public SVGPainter(File svgOutputFile, Dimension canvasSize) {
         this.svgOutputFile = svgOutputFile;
-        this.painted = painted;
-    }
-
-    public void paint() throws IOException {
-
         DOMImplementation domImpl = GenericDOMImplementation.getDOMImplementation();
         Document document = domImpl.createDocument("http://www.w3.org/2000/svg", "svg", null);
-        SVGGraphics2D svgGraphics = new SVGGraphics2D(document);
-        Dimension canvasSize = painted.paint(svgGraphics);
+        svgGraphics = new SVGGraphics2D(document);
+        this.canvasSize = canvasSize;
+    }
+
+    public Graphics2D getGraphics() {
+        return svgGraphics;
+    }
+
+    public void save() throws IOException {
         svgGraphics.setSVGCanvasSize(canvasSize);
         Writer out = new OutputStreamWriter(new FileOutputStream(svgOutputFile), "UTF-8");
         LOG.info("Writing SVG file: {}", svgOutputFile);
@@ -65,5 +65,4 @@ public class SVGPainter {
         LOG.info("SVG file {} write OK (took {} ms)", svgOutputFile, System.currentTimeMillis()
                 - start);
     }
-
 }

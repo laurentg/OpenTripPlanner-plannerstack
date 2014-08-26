@@ -31,7 +31,6 @@ import java.util.List;
 import lombok.Setter;
 
 import org.apache.commons.math3.util.FastMath;
-import org.opentripplanner.graph_builder.impl.svgview.SVGPainter.Paintable;
 import org.opentripplanner.graph_builder.services.GraphBuilder;
 import org.opentripplanner.routing.graph.Edge;
 import org.opentripplanner.routing.graph.Graph;
@@ -62,7 +61,7 @@ public class SVGViewGraphBuilderImpl implements GraphBuilder {
     private static final int MAX_COORDINATE = 10000;
 
     @Setter
-    private String svgOutputFile = "Graph.svg";
+    private String svgOutputFilePrefix = "Graph";
 
     @Setter
     private float lineWidth = 3.0f;
@@ -98,108 +97,99 @@ public class SVGViewGraphBuilderImpl implements GraphBuilder {
     @Override
     public void buildGraph(final Graph graph, HashMap<Class<?>, Object> extra) {
 
-        LOG.info("Generating SVG graph view to {}", svgOutputFile);
-        Paintable paintable = new Paintable() {
+        LOG.info("Generating SVG graph view to {}", svgOutputFilePrefix);
 
-            @Override
-            public Dimension paint(Graphics2D graphics) {
-                Envelope extent = graph.getExtent();
+        Envelope extent = graph.getExtent();
 
-                /* Equirectangular project with phi0 = center of the graph extent */
-                double cosLat = Math.cos(Math.toRadians(graph.getExtent().centre().y));
-                double xScale = MAX_COORDINATE / (extent.getMaxX() - extent.getMinX());
-                double yScale = MAX_COORDINATE / (extent.getMaxY() - extent.getMinY());
-                double scale = Math.min(xScale, yScale / cosLat);
-                /*
-                 * Implementation note: Do not set the transform to the graphics context directly,
-                 * the generated SVG is painfully slow (it generate a transform for *each* generated
-                 * path!)
-                 */
-                AffineTransform transform = new AffineTransform();
-                transform.scale(scale, -scale / cosLat);
-                transform.translate(-extent.getMinX(), -extent.getMaxY());
-                Dimension retval = new Dimension((int) (MAX_COORDINATE * scale / xScale),
-                        (int) (MAX_COORDINATE * scale / yScale / cosLat));
+        /* Equirectangular project with phi0 = center of the graph extent */
+        double cosLat = Math.cos(Math.toRadians(graph.getExtent().centre().y));
+        double xScale = MAX_COORDINATE / (extent.getMaxX() - extent.getMinX());
+        double yScale = MAX_COORDINATE / (extent.getMaxY() - extent.getMinY());
+        double scale = Math.min(xScale, yScale / cosLat);
+        /*
+         * Implementation note: Do not set the transform to the graphics context directly, the
+         * generated SVG is painfully slow (it generate a transform for *each* generated path!)
+         */
+        AffineTransform transform = new AffineTransform();
+        transform.scale(scale, -scale / cosLat);
+        transform.translate(-extent.getMinX(), -extent.getMaxY());
+        Dimension canvasSize = new Dimension((int) (MAX_COORDINATE * scale / xScale),
+                (int) (MAX_COORDINATE * scale / yScale / cosLat));
+        SVGPainter painter = new SVGPainter(new File(svgOutputFilePrefix + ".svg"), canvasSize);
+        Graphics2D graphics = painter.getGraphics();
 
-                int yLegend = 0;
+        int yLegend = 0;
 
-                if (edgeRenderer != null) {
-                    int n = 0;
-                    graphics.setFont(new Font(Font.SANS_SERIF, Font.BOLD, fontSize));
-                    graphics.setStroke(new BasicStroke(lineWidth, BasicStroke.CAP_BUTT,
-                            BasicStroke.JOIN_BEVEL));
-                    for (Edge e : graph.getEdges()) {
-                        EdgeView edgeView = edgeRenderer.render(e);
-                        if (edgeView == null)
-                            continue;
+        if (edgeRenderer != null) {
+            int n = 0;
+            graphics.setFont(new Font(Font.SANS_SERIF, Font.BOLD, fontSize));
+            graphics.setStroke(new BasicStroke(lineWidth, BasicStroke.CAP_BUTT,
+                    BasicStroke.JOIN_BEVEL));
+            for (Edge e : graph.getEdges()) {
+                EdgeView edgeView = edgeRenderer.render(e);
+                if (edgeView == null)
+                    continue;
 
-                        Path2D.Double shape = convertGeometry(e.getGeometry(), transform,
-                                lineWidth * 0.7);
+                Path2D.Double shape = convertGeometry(e.getGeometry(), transform, lineWidth * 0.7);
 
-                        graphics.setColor(edgeView.color != null ? edgeView.color : Color.GRAY);
-                        graphics.draw(shape);
+                graphics.setColor(edgeView.color != null ? edgeView.color : Color.GRAY);
+                graphics.draw(shape);
 
-                        if (edgeView.label != null) {
-                            Point2D labelPosition = findMidPoint(e.getGeometry(), transform);
-                            graphics.setColor(edgeView.labelColor);
-                            graphics.drawString(edgeView.label, (float) labelPosition.getX()
-                                    + fontSize, (float) labelPosition.getY());
-                        }
-
-                        n++;
-                        if (n % 10000 == 0) {
-                            LOG.info("{} edges processed.", n);
-                        }
-                    }
-
-                    /* Render legend */
-                    graphics.setFont(new Font(Font.SANS_SERIF, Font.BOLD, legendFontSize));
-                    for (LegendLabelView legendLabel : edgeRenderer.getLegend()) {
-                        graphics.setColor(legendLabel.color);
-                        graphics.fillRect(MAX_COORDINATE + 100, yLegend, legendFontSize * 4,
-                                legendFontSize);
-                        graphics.setColor(Color.BLACK);
-                        graphics.drawString(legendLabel.label, MAX_COORDINATE + 100
-                                + legendFontSize * 5, yLegend + legendFontSize);
-                        yLegend += legendFontSize * 2;
-                    }
+                if (edgeView.label != null) {
+                    Point2D labelPosition = findMidPoint(e.getGeometry(), transform);
+                    graphics.setColor(edgeView.labelColor);
+                    graphics.drawString(edgeView.label, (float) labelPosition.getX() + fontSize,
+                            (float) labelPosition.getY());
                 }
 
-                if (vertexRenderer != null) {
-                    int n = 0;
-                    graphics.setFont(new Font(Font.SANS_SERIF, Font.BOLD, fontSize));
-                    graphics.setStroke(new BasicStroke(pointWidth, BasicStroke.CAP_ROUND,
-                            BasicStroke.JOIN_BEVEL));
-                    graphics.setColor(Color.BLUE);
-                    for (Vertex v : graph.getVertices()) {
-                        VertexView vertexView = vertexRenderer.render(v);
-                        if (vertexView == null)
-                            continue;
-
-                        Path2D.Double shape = convertGeometry(v.getLon(), v.getLat(), transform);
-                        graphics.setColor(vertexView.color != null ? vertexView.color : Color.GRAY);
-                        graphics.draw(shape);
-
-                        if (vertexView.label != null) {
-                            graphics.setColor(vertexView.labelColor);
-                            graphics.drawString(vertexView.label, (float) shape.getCurrentPoint()
-                                    .getX() + fontSize, (float) shape.getCurrentPoint().getY());
-                        }
-
-                        n++;
-                        if (n % 10000 == 0) {
-                            LOG.info("{} vertex processed.", n);
-                        }
-                    }
+                n++;
+                if (n % 10000 == 0) {
+                    LOG.info("{} edges processed.", n);
                 }
-
-                return retval;
             }
-        };
 
-        SVGPainter painter = new SVGPainter(new File(svgOutputFile), paintable);
+            /* Render legend */
+            graphics.setFont(new Font(Font.SANS_SERIF, Font.BOLD, legendFontSize));
+            for (LegendLabelView legendLabel : edgeRenderer.getLegend()) {
+                graphics.setColor(legendLabel.color);
+                graphics.fillRect(MAX_COORDINATE + 100, yLegend, legendFontSize * 4, legendFontSize);
+                graphics.setColor(Color.BLACK);
+                graphics.drawString(legendLabel.label, MAX_COORDINATE + 100 + legendFontSize * 5,
+                        yLegend + legendFontSize);
+                yLegend += legendFontSize * 2;
+            }
+        }
+
+        if (vertexRenderer != null) {
+            int n = 0;
+            graphics.setFont(new Font(Font.SANS_SERIF, Font.BOLD, fontSize));
+            graphics.setStroke(new BasicStroke(pointWidth, BasicStroke.CAP_ROUND,
+                    BasicStroke.JOIN_BEVEL));
+            graphics.setColor(Color.BLUE);
+            for (Vertex v : graph.getVertices()) {
+                VertexView vertexView = vertexRenderer.render(v);
+                if (vertexView == null)
+                    continue;
+
+                Path2D.Double shape = convertGeometry(v.getLon(), v.getLat(), transform);
+                graphics.setColor(vertexView.color != null ? vertexView.color : Color.GRAY);
+                graphics.draw(shape);
+
+                if (vertexView.label != null) {
+                    graphics.setColor(vertexView.labelColor);
+                    graphics.drawString(vertexView.label, (float) shape.getCurrentPoint().getX()
+                            + fontSize, (float) shape.getCurrentPoint().getY());
+                }
+
+                n++;
+                if (n % 10000 == 0) {
+                    LOG.info("{} vertex processed.", n);
+                }
+            }
+        }
+
         try {
-            painter.paint();
+            painter.save();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
