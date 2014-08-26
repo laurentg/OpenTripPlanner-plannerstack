@@ -151,6 +151,10 @@ public class CommandLineParameters {
             description = "open a debugging graph visualizer")
     boolean visualize;
 
+    @Parameter( names = { "--svgConnectivity" },
+            description = "output street traversal permissions to a SVG file")
+    boolean svgConnectivity;
+
     @Parameter( names = { "--svgBikeSafety" },
             description = "output bike safety values to a SVG file")
     boolean svgBikeSafety;

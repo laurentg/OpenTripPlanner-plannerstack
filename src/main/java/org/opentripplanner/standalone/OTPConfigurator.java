@@ -32,9 +32,11 @@ import org.opentripplanner.graph_builder.impl.ned.ElevationGraphBuilderImpl;
 import org.opentripplanner.graph_builder.impl.ned.NEDGridCoverageFactoryImpl;
 import org.opentripplanner.graph_builder.impl.osm.DefaultWayPropertySetSource;
 import org.opentripplanner.graph_builder.impl.osm.OpenStreetMapGraphBuilderImpl;
+import org.opentripplanner.graph_builder.impl.svgview.PermissionsEdgeRenderer;
 import org.opentripplanner.graph_builder.impl.svgview.SVGViewGraphBuilderImpl;
 import org.opentripplanner.graph_builder.impl.svgview.ScalarValueEdgeRenderer;
 import org.opentripplanner.graph_builder.impl.svgview.ScalarValueEdgeRenderer.ScalarValue;
+import org.opentripplanner.graph_builder.impl.svgview.VertexColoredDotRenderer;
 import org.opentripplanner.graph_builder.model.GtfsBundle;
 import org.opentripplanner.graph_builder.services.GraphBuilder;
 import org.opentripplanner.graph_builder.services.ned.ElevationGridCoverageFactory;
@@ -214,10 +216,18 @@ public class OTPConfigurator {
             GraphBuilder elevationBuilder = new ElevationGraphBuilderImpl(gcf);
             graphBuilder.addGraphBuilder(elevationBuilder);
         }
+        if (params.svgConnectivity) {
+            SVGViewGraphBuilderImpl svgViewGraphBuilder = new SVGViewGraphBuilderImpl();
+            svgViewGraphBuilder.setEdgeRenderer(new PermissionsEdgeRenderer());
+            svgViewGraphBuilder.setVertexRenderer(new VertexColoredDotRenderer(true, true, true));
+            svgViewGraphBuilder.setSvgOutputFile("connectivity.svg");
+            graphBuilder.addGraphBuilder(svgViewGraphBuilder);
+        }
         if (params.svgBikeSafety) {
             SVGViewGraphBuilderImpl svgViewGraphBuilder = new SVGViewGraphBuilderImpl();
             svgViewGraphBuilder.setEdgeRenderer(new ScalarValueEdgeRenderer(
                     ScalarValue.BIKE_SAFETY, 20));
+            svgViewGraphBuilder.setVertexRenderer(new VertexColoredDotRenderer(false, false, true));
             svgViewGraphBuilder.setSvgOutputFile("bike-safety.svg");
             graphBuilder.addGraphBuilder(svgViewGraphBuilder);
         }

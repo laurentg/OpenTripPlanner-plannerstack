@@ -13,18 +13,21 @@
 
 package org.opentripplanner.graph_builder.impl.svgview;
 
-import java.util.List;
-
-import org.opentripplanner.routing.graph.Edge;
+import java.awt.Color;
 
 /**
- * Render an edge.
+ * A label for a legend.
  * 
  * @author laurent
  */
-public interface EdgeRenderer {
+public class LegendLabelView {
 
-    public abstract List<LegendLabelView> getLegend();
+    public Color color;
 
-    public abstract EdgeView render(Edge edge);
+    public String label;
+
+    public LegendLabelView(Color color, String label) {
+        this.color = color;
+        this.label = label;
+    }
 }

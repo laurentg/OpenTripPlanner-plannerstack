@@ -30,6 +30,7 @@ import java.util.List;
 
 import lombok.Setter;
 
+import org.apache.commons.math3.util.FastMath;
 import org.opentripplanner.graph_builder.impl.svgview.SVGPainter.Paintable;
 import org.opentripplanner.graph_builder.services.GraphBuilder;
 import org.opentripplanner.routing.graph.Edge;
@@ -45,7 +46,7 @@ import com.vividsolutions.jts.geom.LineString;
 /**
  * Create a SVG file which display edges/vertices in some color, and some (optional) value attached
  * to it (bike safety factor for example).
- *
+ * 
  * @author laurent
  */
 public class SVGViewGraphBuilderImpl implements GraphBuilder {
@@ -67,17 +68,19 @@ public class SVGViewGraphBuilderImpl implements GraphBuilder {
     private float lineWidth = 3.0f;
 
     @Setter
-    private float pointWidth = 6.0f;
+    private float pointWidth = lineWidth * 2.5f;
 
     @Setter
     private int fontSize = 6;
 
     @Setter
+    private int legendFontSize = 50;
+
+    @Setter
     private EdgeRenderer edgeRenderer;
 
     @Setter
-    private VertexRenderer vertexRenderer = new VertexColoredDotRenderer(
-            new Color(0.3f, 0.3f, 0.3f));
+    private VertexRenderer vertexRenderer;
 
     /**
      * An set of ids which identifies what stages this graph builder provides (i.e. streets,
@@ -118,28 +121,29 @@ public class SVGViewGraphBuilderImpl implements GraphBuilder {
                 Dimension retval = new Dimension((int) (MAX_COORDINATE * scale / xScale),
                         (int) (MAX_COORDINATE * scale / yScale / cosLat));
 
-                /* Setup the graphic output */
-                graphics.setStroke(new BasicStroke(lineWidth, BasicStroke.CAP_BUTT,
-                        BasicStroke.JOIN_BEVEL));
-                Font font = new Font(Font.SANS_SERIF, Font.BOLD, fontSize);
-                graphics.setFont(font);
+                int yLegend = 0;
 
                 if (edgeRenderer != null) {
                     int n = 0;
+                    graphics.setFont(new Font(Font.SANS_SERIF, Font.BOLD, fontSize));
+                    graphics.setStroke(new BasicStroke(lineWidth, BasicStroke.CAP_BUTT,
+                            BasicStroke.JOIN_BEVEL));
                     for (Edge e : graph.getEdges()) {
                         EdgeView edgeView = edgeRenderer.render(e);
                         if (edgeView == null)
                             continue;
 
-                        Path2D.Double shape = convertGeometry(e.getGeometry(), transform);
+                        Path2D.Double shape = convertGeometry(e.getGeometry(), transform,
+                                lineWidth * 0.7);
+
                         graphics.setColor(edgeView.color != null ? edgeView.color : Color.GRAY);
                         graphics.draw(shape);
 
                         if (edgeView.label != null) {
                             Point2D labelPosition = findMidPoint(e.getGeometry(), transform);
                             graphics.setColor(edgeView.labelColor);
-                            graphics.drawString(edgeView.label, (float) labelPosition.getX(),
-                                    (float) labelPosition.getY());
+                            graphics.drawString(edgeView.label, (float) labelPosition.getX()
+                                    + fontSize, (float) labelPosition.getY());
                         }
 
                         n++;
@@ -147,10 +151,23 @@ public class SVGViewGraphBuilderImpl implements GraphBuilder {
                             LOG.info("{} edges processed.", n);
                         }
                     }
+
+                    /* Render legend */
+                    graphics.setFont(new Font(Font.SANS_SERIF, Font.BOLD, legendFontSize));
+                    for (LegendLabelView legendLabel : edgeRenderer.getLegend()) {
+                        graphics.setColor(legendLabel.color);
+                        graphics.fillRect(MAX_COORDINATE + 100, yLegend, legendFontSize * 4,
+                                legendFontSize);
+                        graphics.setColor(Color.BLACK);
+                        graphics.drawString(legendLabel.label, MAX_COORDINATE + 100
+                                + legendFontSize * 5, yLegend + legendFontSize);
+                        yLegend += legendFontSize * 2;
+                    }
                 }
 
                 if (vertexRenderer != null) {
                     int n = 0;
+                    graphics.setFont(new Font(Font.SANS_SERIF, Font.BOLD, fontSize));
                     graphics.setStroke(new BasicStroke(pointWidth, BasicStroke.CAP_ROUND,
                             BasicStroke.JOIN_BEVEL));
                     graphics.setColor(Color.BLUE);
@@ -166,7 +183,7 @@ public class SVGViewGraphBuilderImpl implements GraphBuilder {
                         if (vertexView.label != null) {
                             graphics.setColor(vertexView.labelColor);
                             graphics.drawString(vertexView.label, (float) shape.getCurrentPoint()
-                                    .getX(), (float) shape.getCurrentPoint().getY());
+                                    .getX() + fontSize, (float) shape.getCurrentPoint().getY());
                         }
 
                         n++;
@@ -188,16 +205,28 @@ public class SVGViewGraphBuilderImpl implements GraphBuilder {
         }
     }
 
-    private Path2D.Double convertGeometry(LineString geometry, AffineTransform transform) {
+    private Path2D.Double convertGeometry(LineString geometry, AffineTransform transform,
+            double offsetRight) {
         Path2D.Double retval = new Path2D.Double();
         Coordinate coords[] = geometry.getCoordinates();
-        for (int i = 0; i < coords.length; i++) {
-            Point2D p = transform.transform(new Point2D.Double(coords[i].x, coords[i].y), null);
-            if (i == 0)
-                retval.moveTo(p.getX(), p.getY());
-            else
-                retval.lineTo(p.getX(), p.getY());
+        // Get end-points
+        Point2D A = transform.transform(new Point2D.Double(coords[0].x, coords[0].y), null);
+        Point2D B = transform.transform(new Point2D.Double(coords[coords.length - 1].x,
+                coords[coords.length - 1].y), null);
+        double dx = B.getX() - A.getX();
+        double dy = B.getY() - A.getY();
+        double l = FastMath.sqrt(dx * dx + dy * dy);
+        double xoffset = 0, yoffset = 0;
+        if (l > 1E-10) {
+            xoffset = -dy / l * offsetRight;
+            yoffset = dx / l * offsetRight;
         }
+        retval.moveTo(A.getX() + xoffset, A.getY() + yoffset);
+        for (int i = 1; i < coords.length - 1; i++) {
+            Point2D p = transform.transform(new Point2D.Double(coords[i].x, coords[i].y), null);
+            retval.lineTo(p.getX() + xoffset, p.getY() + yoffset);
+        }
+        retval.lineTo(B.getX() + xoffset, B.getY() + yoffset);
         return retval;
     }
 
