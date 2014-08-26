@@ -59,7 +59,6 @@ public class SVGPainter {
     public void save() throws IOException {
         svgGraphics.setSVGCanvasSize(canvasSize);
         Writer out = new OutputStreamWriter(new FileOutputStream(svgOutputFile), "UTF-8");
-        LOG.info("Writing SVG file: {}", svgOutputFile);
         long start = System.currentTimeMillis();
         svgGraphics.stream(out, true);
         LOG.info("SVG file {} write OK (took {} ms)", svgOutputFile, System.currentTimeMillis()

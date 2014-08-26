@@ -66,13 +66,13 @@ public class SVGViewGraphBuilderImpl implements GraphBuilder {
     private String svgOutputFilePrefix = "Graph";
 
     @Setter
-    private float lineWidth = 3.0f;
+    private float lineWidth = 1.5f;
 
     @Setter
     private float pointWidth = lineWidth * 2.5f;
 
     @Setter
-    private Font labelFont = new Font(Font.SANS_SERIF, Font.BOLD, 6);
+    private Font labelFont = new Font(Font.SANS_SERIF, Font.PLAIN, 4);
 
     @Setter
     private Font legendFont = new Font(Font.SANS_SERIF, Font.BOLD, 50);
@@ -109,7 +109,7 @@ public class SVGViewGraphBuilderImpl implements GraphBuilder {
         nxy = (int) Math.round(Math.sqrt(edges / edgesPerSVG)) + 1;
         Envelope extent = graph.getExtent();
 
-        LOG.info("Generating {} SVG graph view to {}", nxy * nxy, svgOutputFilePrefix);
+        LOG.info("Generating {} SVG graph view to {}-x-y.svg", nxy * nxy, svgOutputFilePrefix);
 
         /* Equirectangular project with phi0 = center of the graph extent */
         double cosLat = Math.cos(Math.toRadians(graph.getExtent().centre().y));
@@ -181,8 +181,7 @@ public class SVGViewGraphBuilderImpl implements GraphBuilder {
                 if (edgeView.label != null) {
                     Point2D labelPosition = findMidPoint(e.getGeometry(), transform);
                     graphic.setColor(edgeView.labelColor);
-                    graphic.drawString(edgeView.label,
-                            (float) labelPosition.getX() + labelFont.getSize(),
+                    graphic.drawString(edgeView.label, (float) labelPosition.getX(),
                             (float) labelPosition.getY());
                 }
 
