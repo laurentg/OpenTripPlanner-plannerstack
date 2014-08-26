@@ -32,6 +32,7 @@ import java.util.List;
 import lombok.Setter;
 
 import org.apache.commons.math3.util.FastMath;
+import org.opentripplanner.common.geometry.GeometryUtils;
 import org.opentripplanner.graph_builder.services.GraphBuilder;
 import org.opentripplanner.routing.graph.Edge;
 import org.opentripplanner.routing.graph.Graph;
@@ -84,7 +85,7 @@ public class SVGViewGraphBuilderImpl implements GraphBuilder {
     private VertexRenderer vertexRenderer;
 
     @Setter
-    private int edgesPerSVG = 10000;
+    private int edgesPerSVG = 30000;
 
     private int nxy = 1;
 
@@ -165,7 +166,12 @@ public class SVGViewGraphBuilderImpl implements GraphBuilder {
                 Graphics2D graphic = findGraphics(e.getFromVertex().getLon(), e.getFromVertex()
                         .getLat(), graphics, transform, canvasSize);
 
-                Path2D.Double shape = convertGeometry(e.getGeometry(), transform, lineWidth * 0.7);
+                LineString geometry = e.getGeometry();
+                if (geometry == null)
+                    geometry = GeometryUtils.getGeometryFactory().createLineString(
+                            new Coordinate[] { e.getFromVertex().getCoordinate(),
+                                    e.getToVertex().getCoordinate() });
+                Path2D.Double shape = convertGeometry(geometry, transform, lineWidth * 0.7);
 
                 graphic.setFont(labelFont);
                 graphic.setColor(edgeView.color != null ? edgeView.color : Color.GRAY);
