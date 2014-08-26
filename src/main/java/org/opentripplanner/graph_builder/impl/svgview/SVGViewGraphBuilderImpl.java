@@ -18,6 +18,7 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics2D;
+import java.awt.Stroke;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
@@ -70,16 +71,22 @@ public class SVGViewGraphBuilderImpl implements GraphBuilder {
     private float pointWidth = lineWidth * 2.5f;
 
     @Setter
-    private int fontSize = 6;
+    private Font labelFont = new Font(Font.SANS_SERIF, Font.BOLD, 6);
 
     @Setter
-    private int legendFontSize = 50;
+    private Font legendFont = new Font(Font.SANS_SERIF, Font.BOLD, 50);
 
+    // TODO Support multiple edgeRenderer and vertexRenderer
     @Setter
     private EdgeRenderer edgeRenderer;
 
     @Setter
     private VertexRenderer vertexRenderer;
+
+    @Setter
+    private int edgesPerSVG = 10000;
+
+    private int nxy = 1;
 
     /**
      * An set of ids which identifies what stages this graph builder provides (i.e. streets,
@@ -97,9 +104,11 @@ public class SVGViewGraphBuilderImpl implements GraphBuilder {
     @Override
     public void buildGraph(final Graph graph, HashMap<Class<?>, Object> extra) {
 
-        LOG.info("Generating SVG graph view to {}", svgOutputFilePrefix);
-
+        int edges = graph.getEdges().size();
+        nxy = (int) Math.round(Math.sqrt(edges / edgesPerSVG)) + 1;
         Envelope extent = graph.getExtent();
+
+        LOG.info("Generating {} SVG graph view to {}", nxy * nxy, svgOutputFilePrefix);
 
         /* Equirectangular project with phi0 = center of the graph extent */
         double cosLat = Math.cos(Math.toRadians(graph.getExtent().centre().y));
@@ -115,30 +124,59 @@ public class SVGViewGraphBuilderImpl implements GraphBuilder {
         transform.translate(-extent.getMinX(), -extent.getMaxY());
         Dimension canvasSize = new Dimension((int) (MAX_COORDINATE * scale / xScale),
                 (int) (MAX_COORDINATE * scale / yScale / cosLat));
-        SVGPainter painter = new SVGPainter(new File(svgOutputFilePrefix + ".svg"), canvasSize);
-        Graphics2D graphics = painter.getGraphics();
+        SVGPainter[][] painters = new SVGPainter[nxy][nxy];
+        Graphics2D[][] graphics = new Graphics2D[nxy][nxy];
+        for (int ix = 0; ix < nxy; ix++)
+            for (int iy = 0; iy < nxy; iy++) {
+                painters[ix][iy] = new SVGPainter(new File(String.format("%s-%d-%d.svg",
+                        svgOutputFilePrefix, ix, iy)), canvasSize);
+                graphics[ix][iy] = painters[ix][iy].getGraphics();
+            }
 
-        int yLegend = 0;
+        Stroke lineStroke = new BasicStroke(lineWidth, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL);
+        Stroke pointStroke = new BasicStroke(pointWidth, BasicStroke.CAP_ROUND,
+                BasicStroke.JOIN_BEVEL);
+
+        /* Draw rectangle bounds in RED for each sub-region SVG */
+        for (int ix = 0; ix < nxy; ix++)
+            for (int iy = 0; iy < nxy; iy++) {
+                Graphics2D graphic = graphics[ix][iy];
+                Path2D.Double bounds = new Path2D.Double();
+                bounds.moveTo(1.0 * ix * canvasSize.getWidth() / nxy,
+                        1.0 * iy * canvasSize.getHeight() / nxy);
+                bounds.lineTo(1.0 * (ix + 1) * canvasSize.getWidth() / nxy,
+                        1.0 * iy * canvasSize.getHeight() / nxy);
+                bounds.lineTo(1.0 * (ix + 1) * canvasSize.getWidth() / nxy, 1.0 * (iy + 1)
+                        * canvasSize.getHeight() / nxy);
+                bounds.lineTo(1.0 * ix * canvasSize.getWidth() / nxy,
+                        1.0 * (iy + 1) * canvasSize.getHeight() / nxy);
+                bounds.closePath();
+                graphic.setColor(Color.RED);
+                graphic.draw(bounds);
+            }
 
         if (edgeRenderer != null) {
             int n = 0;
-            graphics.setFont(new Font(Font.SANS_SERIF, Font.BOLD, fontSize));
-            graphics.setStroke(new BasicStroke(lineWidth, BasicStroke.CAP_BUTT,
-                    BasicStroke.JOIN_BEVEL));
             for (Edge e : graph.getEdges()) {
                 EdgeView edgeView = edgeRenderer.render(e);
                 if (edgeView == null)
                     continue;
 
+                Graphics2D graphic = findGraphics(e.getFromVertex().getLon(), e.getFromVertex()
+                        .getLat(), graphics, transform, canvasSize);
+
                 Path2D.Double shape = convertGeometry(e.getGeometry(), transform, lineWidth * 0.7);
 
-                graphics.setColor(edgeView.color != null ? edgeView.color : Color.GRAY);
-                graphics.draw(shape);
+                graphic.setFont(labelFont);
+                graphic.setColor(edgeView.color != null ? edgeView.color : Color.GRAY);
+                graphic.setStroke(lineStroke);
+                graphic.draw(shape);
 
                 if (edgeView.label != null) {
                     Point2D labelPosition = findMidPoint(e.getGeometry(), transform);
-                    graphics.setColor(edgeView.labelColor);
-                    graphics.drawString(edgeView.label, (float) labelPosition.getX() + fontSize,
+                    graphic.setColor(edgeView.labelColor);
+                    graphic.drawString(edgeView.label,
+                            (float) labelPosition.getX() + labelFont.getSize(),
                             (float) labelPosition.getY());
                 }
 
@@ -149,36 +187,43 @@ public class SVGViewGraphBuilderImpl implements GraphBuilder {
             }
 
             /* Render legend */
-            graphics.setFont(new Font(Font.SANS_SERIF, Font.BOLD, legendFontSize));
-            for (LegendLabelView legendLabel : edgeRenderer.getLegend()) {
-                graphics.setColor(legendLabel.color);
-                graphics.fillRect(MAX_COORDINATE + 100, yLegend, legendFontSize * 4, legendFontSize);
-                graphics.setColor(Color.BLACK);
-                graphics.drawString(legendLabel.label, MAX_COORDINATE + 100 + legendFontSize * 5,
-                        yLegend + legendFontSize);
-                yLegend += legendFontSize * 2;
-            }
+            for (int ix = 0; ix < nxy; ix++)
+                for (int iy = 0; iy < nxy; iy++) {
+                    Graphics2D graphic = graphics[ix][iy];
+                    graphic.setFont(legendFont);
+                    int yLegend = 0;
+                    for (LegendLabelView legendLabel : edgeRenderer.getLegend()) {
+                        graphic.setColor(legendLabel.color);
+                        graphic.fillRect(MAX_COORDINATE + 100, yLegend, legendFont.getSize() * 4,
+                                legendFont.getSize());
+                        graphic.setColor(Color.BLACK);
+                        graphic.drawString(legendLabel.label,
+                                MAX_COORDINATE + 100 + legendFont.getSize() * 5, yLegend
+                                        + legendFont.getSize());
+                        yLegend += legendFont.getSize() * 2;
+                    }
+                }
         }
 
         if (vertexRenderer != null) {
             int n = 0;
-            graphics.setFont(new Font(Font.SANS_SERIF, Font.BOLD, fontSize));
-            graphics.setStroke(new BasicStroke(pointWidth, BasicStroke.CAP_ROUND,
-                    BasicStroke.JOIN_BEVEL));
-            graphics.setColor(Color.BLUE);
             for (Vertex v : graph.getVertices()) {
                 VertexView vertexView = vertexRenderer.render(v);
                 if (vertexView == null)
                     continue;
 
+                Graphics2D graphic = findGraphics(v.getLon(), v.getLat(), graphics, transform,
+                        canvasSize);
                 Path2D.Double shape = convertGeometry(v.getLon(), v.getLat(), transform);
-                graphics.setColor(vertexView.color != null ? vertexView.color : Color.GRAY);
-                graphics.draw(shape);
+                graphic.setStroke(pointStroke);
+                graphic.setColor(vertexView.color != null ? vertexView.color : Color.GRAY);
+                graphic.draw(shape);
 
                 if (vertexView.label != null) {
-                    graphics.setColor(vertexView.labelColor);
-                    graphics.drawString(vertexView.label, (float) shape.getCurrentPoint().getX()
-                            + fontSize, (float) shape.getCurrentPoint().getY());
+                    graphic.setFont(labelFont);
+                    graphic.setColor(vertexView.labelColor);
+                    graphic.drawString(vertexView.label, (float) shape.getCurrentPoint().getX()
+                            + labelFont.getSize(), (float) shape.getCurrentPoint().getY());
                 }
 
                 n++;
@@ -189,7 +234,10 @@ public class SVGViewGraphBuilderImpl implements GraphBuilder {
         }
 
         try {
-            painter.save();
+            for (int ix = 0; ix < nxy; ix++)
+                for (int iy = 0; iy < nxy; iy++) {
+                    painters[ix][iy].save();
+                }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -237,6 +285,22 @@ public class SVGViewGraphBuilderImpl implements GraphBuilder {
         retval.moveTo(p.getX(), p.getY());
         retval.lineTo(p.getX(), p.getY());
         return retval;
+    }
+
+    private Graphics2D findGraphics(double lon, double lat, Graphics2D[][] graphics,
+            AffineTransform transform, Dimension canvasSize) {
+        Point2D p = transform.transform(new Point2D.Double(lon, lat), null);
+        int ix = (int) (p.getX() / canvasSize.getWidth() * nxy);
+        if (ix < 0)
+            ix = 0;
+        if (ix >= nxy)
+            ix = nxy - 1;
+        int iy = (int) (p.getY() / canvasSize.getHeight() * nxy);
+        if (iy < 0)
+            iy = 0;
+        if (iy >= nxy)
+            iy = nxy - 1;
+        return graphics[ix][iy];
     }
 
     @Override
