@@ -218,17 +218,17 @@ public class OTPConfigurator {
         }
         if (params.svgConnectivity) {
             SVGViewGraphBuilderImpl svgViewGraphBuilder = new SVGViewGraphBuilderImpl();
-            svgViewGraphBuilder.setEdgeRenderer(new PermissionsEdgeRenderer());
-            svgViewGraphBuilder.setVertexRenderer(new VertexColoredDotRenderer(true, true, true));
-            svgViewGraphBuilder.setSvgOutputFilePrefix("connectivity");
+            svgViewGraphBuilder.edgeRenderer = new PermissionsEdgeRenderer();
+            svgViewGraphBuilder.vertexRenderer = new VertexColoredDotRenderer(true, true, true);
+            svgViewGraphBuilder.svgOutputFilePrefix = "connectivity";
             graphBuilder.addGraphBuilder(svgViewGraphBuilder);
         }
         if (params.svgBikeSafety) {
             SVGViewGraphBuilderImpl svgViewGraphBuilder = new SVGViewGraphBuilderImpl();
-            svgViewGraphBuilder.setEdgeRenderer(new ScalarValueEdgeRenderer(
-                    ScalarValue.BIKE_SAFETY, 20));
-            svgViewGraphBuilder.setVertexRenderer(new VertexColoredDotRenderer(false, false, true));
-            svgViewGraphBuilder.setSvgOutputFilePrefix("bike-safety");
+            svgViewGraphBuilder.edgeRenderer = new ScalarValueEdgeRenderer(
+                    ScalarValue.BIKE_SAFETY, 20);
+            svgViewGraphBuilder.vertexRenderer = new VertexColoredDotRenderer(false, false, true);
+            svgViewGraphBuilder.svgOutputFilePrefix = "bike-safety";
             graphBuilder.addGraphBuilder(svgViewGraphBuilder);
         }
         graphBuilder.setSerializeGraph( ( ! params.inMemory ) || params.preFlight );

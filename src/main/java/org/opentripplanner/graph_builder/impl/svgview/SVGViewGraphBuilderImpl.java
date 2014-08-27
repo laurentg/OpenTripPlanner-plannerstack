@@ -29,8 +29,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
-import lombok.Setter;
-
 import org.apache.commons.math3.util.FastMath;
 import org.opentripplanner.common.geometry.GeometryUtils;
 import org.opentripplanner.graph_builder.services.GraphBuilder;
@@ -62,30 +60,22 @@ public class SVGViewGraphBuilderImpl implements GraphBuilder {
      */
     private static final int MAX_COORDINATE = 10000;
 
-    @Setter
-    private String svgOutputFilePrefix = "Graph";
+    public String svgOutputFilePrefix = "Graph";
 
-    @Setter
-    private float lineWidth = 1.5f;
+    public float lineWidth = 1.5f;
 
-    @Setter
-    private float pointWidth = lineWidth * 2.5f;
+    public float pointWidth = lineWidth * 2.5f;
 
-    @Setter
-    private Font labelFont = new Font(Font.SANS_SERIF, Font.PLAIN, 4);
+    public Font labelFont = new Font(Font.SANS_SERIF, Font.PLAIN, 4);
 
-    @Setter
-    private Font legendFont = new Font(Font.SANS_SERIF, Font.BOLD, 50);
+    public Font legendFont = new Font(Font.SANS_SERIF, Font.BOLD, 50);
 
     // TODO Support multiple edgeRenderer and vertexRenderer
-    @Setter
-    private EdgeRenderer edgeRenderer;
+    public EdgeRenderer edgeRenderer;
 
-    @Setter
-    private VertexRenderer vertexRenderer;
+    public VertexRenderer vertexRenderer;
 
-    @Setter
-    private int edgesPerSVG = 30000;
+    public int edgesPerSVG = 30000;
 
     private int nxy = 1;
 
