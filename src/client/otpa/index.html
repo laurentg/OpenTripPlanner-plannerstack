@@ -1,0 +1,74 @@
+<html>
+
+<head>
+<meta charset="utf-8" />
+<title>OTPA Demo</title>
+<link rel="stylesheet" href="http://leafletjs.com/dist/leaflet.css" />
+<script src="http://leafletjs.com/dist/leaflet.js"></script>
+
+<script
+	src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+<link rel="stylesheet"
+	href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/themes/smoothness/jquery-ui.css"
+	type="text/css" media="all" />
+<script
+	src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.js"></script>
+
+<link rel="stylesheet" type="text/css" href="client.css" />
+</head>
+
+<body>
+	<div id="toolbox">
+		<h1>Demo OpenTripPlanner Analyst Toulouse</h1>
+
+		<h2>Paramètres de calcul</h2>
+		<div id="widget1"></div>
+		<p>
+			<button id="refresh">Rafraîchir</button>
+		</p>
+
+		<h2>Légende</h2>
+		<canvas id="legend" width="300" height="16"></canvas>
+
+		<h2>Exemple d'indicateurs d'accessibilité</h2>
+		<table>
+			<thead>
+				<tr>
+					<th>Catégorie</th>
+					<th id="cutoff1"></th>
+					<th id="cutoff2"></th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr>
+					<td>Collèges (Nombre)</td>
+					<td id="c1"></td>
+					<td id="c2"></td>
+				</tr>
+				<tr>
+					<td>Collèges (Places)</td>
+					<td id="cp1"></td>
+					<td id="cp2"></td>
+				</tr>
+				<tr>
+					<td>Lycées (Nombre)</td>
+					<td id="l1"></td>
+					<td id="l2"></td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+	<div id="map"></div>
+
+	<script type="text/javascript" src="js/otp/otpa.js"></script>
+	<script type="text/javascript" src="js/otp/French.js"></script>
+	<script type="text/javascript" src="js/otp/Widgets.js"></script>
+	<script type="text/javascript" src="js/otp/TimeGrid.js"></script>
+	<script type="text/javascript" src="js/otp/ColorMap.js"></script>
+	<script type="text/javascript" src="js/otp/Isochrone.js"></script>
+	<script type="text/javascript" src="js/otp/Population.js"></script>
+	<script type="text/javascript" src="js/otp/Scoring.js"></script>
+	<script type="text/javascript" src="js/client.js"></script>
+</body>
+
+</html>
