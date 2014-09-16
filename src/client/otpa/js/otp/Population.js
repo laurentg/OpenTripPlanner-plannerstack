@@ -45,10 +45,11 @@ otp.analyst.Population = otp.Class({
     /**
      * Load population from CSV data.
      */
-    loadFromCsv : function(csvUrl, options) {
+    loadFromCsv : function(csvUrl, options, separator) {
+        separator = separator || ',';
         var thisPl = this;
         this._loadAjax(csvUrl, options, function(payload) {
-            payload = thisPl._parseCsv(payload);
+            payload = thisPl._parseCsv(payload, separator);
             if (payload.length < 1)
                 return;
             // Find the various column indexes from CSV header
@@ -75,7 +76,7 @@ otp.analyst.Population = otp.Class({
                     },
                     w : weightCol ? payload[row][weightCol] : 1.0
                 };
-                if (nameCol)
+                if (typeof(nameCol) != "undefined")
                     item.name = payload[row][nameCol];
                 thisPl.data.push(item);
             }
@@ -136,7 +137,7 @@ otp.analyst.Population = otp.Class({
     /**
      * Parse CSV data. See http://stackoverflow.com/questions/1293147
      */
-    _parseCsv : function(csv, reviver) {
+    _parseCsv : function(csv, separator, reviver) {
         reviver = reviver || function(r, c, v) {
             return v;
         };
@@ -159,14 +160,14 @@ otp.analyst.Population = otp.Class({
                     }
                     if ('"' === chars[c])
                         ++c;
-                    while (c < cc && '\r' !== chars[c] && '\n' !== chars[c] && ',' !== chars[c])
+                    while (c < cc && '\r' !== chars[c] && '\n' !== chars[c] && separator !== chars[c])
                         ++c;
                 } else {
-                    while (c < cc && '\r' !== chars[c] && '\n' !== chars[c] && ',' !== chars[c])
+                    while (c < cc && '\r' !== chars[c] && '\n' !== chars[c] && separator !== chars[c])
                         end = ++c;
                 }
                 row.push(reviver(table.length - 1, row.length, chars.slice(start, end).join('')));
-                if (',' === chars[c])
+                if (separator === chars[c])
                     ++c;
             }
             if ('\r' === chars[c])
