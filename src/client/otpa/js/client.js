@@ -46,63 +46,57 @@ $(function() {
     /* Create 3 layer groups for easier display / management */
     gui.gradientLayerGroup = new L.LayerGroup([]);
     gui.isochronesLayerGroup = new L.LayerGroup([]);
-    gui.populationLayerGroup = new L.LayerGroup([]);
     gui.map.addLayer(gui.gradientLayerGroup);
     gui.map.addLayer(gui.isochronesLayerGroup);
 
     /* Add controls to the map */
-    L.control.layers({
+    gui.layerControl = L.control.layers({
         "Transport" : gui.otLayer,
         "OSM" : gui.osmLayer
     }, {
-        "Populations" : gui.populationLayerGroup,
         "Gradient" : gui.gradientLayerGroup,
         "Isochrones" : gui.isochronesLayerGroup,
-    }).addTo(gui.map);
+    });
+    gui.layerControl.addTo(gui.map);
 
     /* Load populations and add markers */
     function addPopulationMarkers(population, pathOptions) {
-        for (var i = 0; i < population.size(); i++) {
-            var item = population.get(i);
-            gui.populationLayerGroup.addLayer(L.circleMarker(item.location, pathOptions));
-        }
     }
-    gui.colleges = new otp.analyst.Population();
-    gui.colleges.loadFromCsv("colleges.csv", {
-        lonColName : "X",
-        latColName : "Y",
-        nameColName : "DESIGNATIO"
-    }).onLoad(function(population) {
-        addPopulationMarkers(population, {
-            radius : 4,
-            color : "#000",
-            opacity : 0.8,
-            fillOpacity : 0.8,
-            fillColor : "#C0C"
-        });
-    });
-    // Reload colleges, this time weighting on # of places
-    gui.collegesPlaces = new otp.analyst.Population();
-    gui.collegesPlaces.loadFromCsv("colleges.csv", {
-        lonColName : "X",
-        latColName : "Y",
-        nameColName : "DESIGNATIO",
-        weightColName : "TOTAL"
-    });
-    gui.lycees = new otp.analyst.Population();
-    gui.lycees.loadFromCsv("lycees.csv", {
-        lonColName : "X",
-        latColName : "Y",
-        nameColName : "DESIGNATIO"
-    }).onLoad(function(population) {
-        addPopulationMarkers(population, {
-            radius : 4,
-            color : "#000",
-            opacity : 0.8,
-            fillOpacity : 0.8,
-            fillColor : "#F00"
-        });
-    });
+
+    gui.populations = [];
+    function addPopulation(layerName, filename, nameColName, key, color) {
+        var pop = new otp.analyst.Population();
+        pop.loadFromCsv(filename, {
+            lonColName : "X_WGS84",
+            latColName : "Y_WGS84",
+            nameColName : nameColName
+        }, ";").onLoad(
+                function(population) {
+                    var pathOptions = {
+                        radius : 4,
+                        color : "#000",
+                        opacity : 0.8,
+                        fillOpacity : 0.8,
+                        fillColor : color
+                    };
+                    population.layer = new L.LayerGroup([]);
+                    gui.layerControl.addOverlay(population.layer, layerName);
+                    for (var i = 0; i < population.size(); i++) {
+                        var item = population.get(i);
+                        population.layer.addLayer(L.circleMarker(item.location, pathOptions).bindPopup(
+                                layerName + ":" + item.name));
+                    }
+                });
+        pop.key = key;
+        gui.populations.push(pop);
+    }
+    addPopulation("Crèches", "Creches.csv", "NOM", "cr", "#FC0");
+    addPopulation("Écoles maternelles", "Ecoles_Mat_Publiques.csv", "Ecole", "em", "#F80");
+    addPopulation("Écoles élémentaires", "Ecoles_Elem_Publiques.csv", "Ecole", "ee", "#F00");
+    addPopulation("Bibliothèques", "Bibliotheques.csv", "Nom", "bi", "#0C0");
+    addPopulation("Cinémas", "Cinema.csv", "EQ_NOM_EQUIPEMENT", "ci", "#0CC");
+    addPopulation("Équipements Culturels", "Equipement_culturel.csv", "NOM", "ec", "#08C");
+    addPopulation("Piscines", "Piscines.csv", "nom_complet", "pi", "#00C");
 
     /* Select client-wide locale */
     otp.setLocale(otp.locale.French);
@@ -143,19 +137,18 @@ $(function() {
             /* Update scores, cutoff depends on data we have available. */
             var cutoff1 = params1.zDataType == "BOARDINGS" ? 1.5 : params1.zDataType == "WALK_DISTANCE" ? 400 : 1800;
             var cutoff2 = params1.zDataType == "BOARDINGS" ? 2.5 : params1.zDataType == "WALK_DISTANCE" ? 800 : 3600;
-            var labels = params1.zDataType == "BOARDINGS" ? [ "<1", "<2 corresp." ]
+            var labels = params1.zDataType == "BOARDINGS" ? [ "<1 c.", "<2 c." ]
                     : params1.zDataType == "WALK_DISTANCE" ? [ "<400m", "<800m" ] : [ "<30mn", "<1h" ];
             var scorer = new otp.analyst.Scoring();
             var edge1 = otp.analyst.Scoring.stepEdge(cutoff1);
             var edge2 = otp.analyst.Scoring.stepEdge(cutoff2);
             $("#cutoff1").text(labels[0]);
             $("#cutoff2").text(labels[1]);
-            $("#c1").text(scorer.score(timeGrid, gui.colleges, edge1, 1.0));
-            $("#c2").text(scorer.score(timeGrid, gui.colleges, edge2, 1.0));
-            $("#cp1").text(scorer.score(timeGrid, gui.collegesPlaces, edge1, 1.0));
-            $("#cp2").text(scorer.score(timeGrid, gui.collegesPlaces, edge2, 1.0));
-            $("#l1").text(scorer.score(timeGrid, gui.lycees, edge1, 1.0));
-            $("#l2").text(scorer.score(timeGrid, gui.lycees, edge2, 1.0));
+            for (var i = 0; i < gui.populations.length; i++) {
+                var pop = gui.populations[i];
+                $("#" + pop.key + "1").text(scorer.score(timeGrid, pop, edge1, 1.0));
+                $("#" + pop.key + "2").text(scorer.score(timeGrid, pop, edge2, 1.0));
+            }
         });
 
         if (false) {
