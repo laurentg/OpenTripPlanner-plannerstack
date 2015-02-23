@@ -15,10 +15,10 @@ package org.opentripplanner.api.common;
 
 import java.util.*;
 
-import javax.inject.Inject;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.Context;
 import javax.xml.datatype.DatatypeConfigurationException;
 import javax.xml.datatype.DatatypeConstants;
 import javax.xml.datatype.DatatypeFactory;
@@ -30,6 +30,7 @@ import org.opentripplanner.routing.core.OptimizeType;
 import org.opentripplanner.routing.core.RoutingRequest;
 import org.opentripplanner.routing.request.BannedStopSet;
 import org.opentripplanner.standalone.OTPServer;
+import org.opentripplanner.standalone.Router;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,12 +65,9 @@ public abstract class RoutingResource {
     /** The end location (see fromPlace for format). */
     @QueryParam("toPlace") protected List<String> toPlace;
 
-    /** An unordered list of intermediate locations to be visited (see the fromPlace for format). */
+    /** An ordered list of intermediate locations to be visited (see the fromPlace for format). */
     @QueryParam("intermediatePlaces") protected List<String> intermediatePlaces;
-    
-    /** Whether or not the order of intermediate locations is to be respected (TSP vs series). */
-    @DefaultValue("false") @QueryParam("intermediatePlacesOrdered") protected Boolean intermediatePlacesOrdered;
-    
+
     /** The date that the trip should depart (or arrive, for requests where arriveBy is true). */
     @QueryParam("date") protected List<String> date;
     
@@ -158,7 +156,8 @@ public abstract class RoutingResource {
      */
     @DefaultValue("") @QueryParam("preferredRoutes") protected List<String> preferredRoutes;
 
-    /** The maximum number of possible itineraries to return. */
+    /** Penalty added for using every route that is not preferred if user set any route as preferred, i.e. number of seconds that we are willing
+     * to wait for preferred route. */
     @DefaultValue("-1") @QueryParam("otherThanPreferredRoutesPenalty") protected List<Integer> otherThanPreferredRoutesPenalty;
     
     /** The comma-separated list of preferred agencies. */
@@ -309,7 +308,7 @@ public abstract class RoutingResource {
      * Alternatively, we could eliminate the separate RoutingRequest objects and just resolve
      * vertices and timezones here right away, but just ignore them in semantic equality checks.
      */
-    @Inject
+    @Context
     protected OTPServer otpServer;
 
     /** 
@@ -327,7 +326,8 @@ public abstract class RoutingResource {
      * @throws ParameterException when there is a problem interpreting a query parameter
      */
     protected RoutingRequest buildRequest(int n) throws ParameterException {
-        RoutingRequest request = otpServer.routingRequest.clone();
+        Router router = otpServer.getRouter(routerId);
+        RoutingRequest request = router.defaultRoutingRequest.clone();
         request.setFromString(get(fromPlace, n, request.getFromPlace().getRepresentation()));
         request.setToString(get(toPlace, n, request.getToPlace().getRepresentation()));
         request.routerId = routerId;
@@ -336,13 +336,7 @@ public abstract class RoutingResource {
             String d = get(date, n, null);
             String t = get(time, n, null);
             TimeZone tz;
-            if (otpServer.graphService != null) { // in tests graphService can be null
-                tz = otpServer.graphService.getGraph(request.routerId).getTimeZone();
-            } else {
-                LOG.warn("No graph service available, using default time zone.");
-                tz = TimeZone.getDefault();
-                LOG.info("Time zone set to {}", tz);
-            }
+            tz = router.graph.getTimeZone();
             if (d == null && t != null) { // Time was provided but not date
                 LOG.debug("parsing ISO datetime {}", t);
                 try {
@@ -407,9 +401,6 @@ public abstract class RoutingResource {
             && ! intermediatePlaces.get(0).equals("")) {
             request.setIntermediatePlacesFromStrings(intermediatePlaces);
         }
-        if (intermediatePlacesOrdered == null)
-            intermediatePlacesOrdered = request.intermediatePlacesOrdered;
-        request.intermediatePlacesOrdered = intermediatePlacesOrdered;
         request.setPreferredRoutes(get(preferredRoutes, n, request.getPreferredRouteStr()));
         request.setOtherThanPreferredRoutesPenalty(get(otherThanPreferredRoutesPenalty, n, request.otherThanPreferredRoutesPenalty));
         request.setPreferredAgencies(get(preferredAgencies, n, request.getPreferredAgenciesStr()));
@@ -459,11 +450,6 @@ public abstract class RoutingResource {
         boolean tripPlannedForNow = Math.abs(request.getDateTime().getTime() - new Date().getTime()) 
                 < NOW_THRESHOLD_MILLIS;
         request.useBikeRentalAvailabilityInformation = (tripPlannedForNow);
-        if (request.intermediatePlaces != null
-                && (request.modes.isTransit() || 
-                        (request.modes.getWalk() && 
-                         request.modes.getBicycle())))
-            throw new UnsupportedOperationException("TSP is not supported for transit or bike share trips");
 
         String startTransitStopId = get(this.startTransitStopId, n,
                 AgencyAndId.convertToString(request.startingTransitStopId));
@@ -550,7 +536,7 @@ public abstract class RoutingResource {
  * This checks a query parameter field from Jersey (which is a list, one element for each occurrence
  * of the parameter in the query string) for the nth occurrence, or the one with the highest index.
  * If a parameter was supplied, it replaces the value in the RoutingRequest under construction 
- * (which was cloned from the prototypeRoutingRequest). If not, it uses the value already in that
+ * (which was cloned from the defaultRoutingRequest). If not, it uses the value already in that
  * RoutingRequest as a default (i.e. it uses the value cloned from the PrototypeRoutingRequest). 
  * 
  * @param l list of query parameter values

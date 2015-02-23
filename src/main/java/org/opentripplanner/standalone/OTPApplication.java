@@ -6,28 +6,12 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 import org.glassfish.jersey.CommonProperties;
+import org.glassfish.jersey.media.multipart.MultiPartFeature;
 import org.glassfish.jersey.server.ServerProperties;
 import org.glassfish.jersey.server.filter.RolesAllowedDynamicFeature;
 import org.opentripplanner.api.common.OTPExceptionMapper;
 import org.opentripplanner.api.model.JSONObjectMapperProvider;
-import org.opentripplanner.api.resource.AlertPatcher;
-import org.opentripplanner.api.resource.BikeRental;
-import org.opentripplanner.api.resource.ExternalGeocoderResource;
-import org.opentripplanner.api.resource.GraphInspectorTileResource;
-import org.opentripplanner.api.resource.Metadata;
-import org.opentripplanner.api.resource.Planner;
-import org.opentripplanner.api.resource.PointSetResource;
-import org.opentripplanner.api.resource.ProfileResource;
-import org.opentripplanner.api.resource.Routers;
-import org.opentripplanner.api.resource.ServerInfo;
-import org.opentripplanner.api.resource.LIsochrone;
-import org.opentripplanner.api.resource.LegendResource;
-import org.opentripplanner.api.resource.Raster;
-import org.opentripplanner.api.resource.SIsochrone;
-import org.opentripplanner.api.resource.SimpleIsochrone;
-import org.opentripplanner.api.resource.SurfaceResource;
-import org.opentripplanner.api.resource.TileService;
-import org.opentripplanner.api.resource.TimeGridWs;
+import org.opentripplanner.api.resource.*;
 import org.opentripplanner.index.GeocoderResource;
 import org.opentripplanner.index.IndexAPI;
 import org.slf4j.bridge.SLF4JBridgeHandler;
@@ -51,19 +35,26 @@ public class OTPApplication extends Application {
     static {
         // Remove existing handlers attached to the j.u.l root logger
         SLF4JBridgeHandler.removeHandlersForRootLogger();
-        // Bridge j.u.l (used by Jersey) to the SLF4J root logger
+        // Bridge j.u.l (used by Jersey) to the SLF4J root logger, so all logging goes through the same API
         SLF4JBridgeHandler.install();
     }
 
+    /* This object groups together all the modules for a single running OTP server. */
     public final OTPServer server;
+
+    /* If secure is true, OTP will require Basic authentication over HTTPS when accessing dangerous web services. */
+    private final boolean secure;
 
     /**
      * The OTPServer provides entry points to OTP routing functionality for a collection of OTPRouters.
      * It provides a Java API, not an HTTP API.
      * The OTPApplication wraps an OTPServer in a Jersey (JAX-RS) Application, configuring an HTTP API.
+     * @param server The OTP server to wrap
+     * @param secure Should this server require authentication over HTTPS to access secure resources, e.g. /routers?
      */
-    public OTPApplication (OTPServer server) {
+    public OTPApplication (OTPServer server, boolean secure) {
         this.server = server;
+        this.secure = secure;
     }
 
     /**
@@ -78,7 +69,7 @@ public class OTPApplication extends Application {
         Set<Class<?>> classes = Sets.newHashSet();
         classes.addAll(Arrays.asList(
             /* Jersey resource classes: define web services, i.e. an HTTP API. */
-            Planner.class,
+            PlannerResource.class,
             IndexAPI.class,
             ExternalGeocoderResource.class,
             GeocoderResource.class,
@@ -89,7 +80,7 @@ public class OTPApplication extends Application {
             ExternalGeocoderResource.class,
             TimeGridWs.class,
             AlertPatcher.class,
-            Planner.class,
+            PlannerResource.class,
             SIsochrone.class,
             Routers.class,
             Raster.class,
@@ -101,12 +92,20 @@ public class OTPApplication extends Application {
             SurfaceResource.class,
             PointSetResource.class,
             GraphInspectorTileResource.class,
+            ScriptResource.class,
+            UpdaterStatusResource.class,
             /* Features and Filters: extend Jersey, manipulate requests and responses. */
-            AuthFilter.class,
             CorsFilter.class,
-            // Enforce roles annotations defined by JSR-250
-            RolesAllowedDynamicFeature.class
+            MultiPartFeature.class
         ));
+        
+        if (this.secure) {
+            // A filter that converts HTTP Basic authentication headers into a Jersey SecurityContext
+            classes.add(AuthFilter.class);
+            // Enforce roles annotations defined by JSR-250 (allow access to API methods based on the SecurityContext)
+            classes.add(RolesAllowedDynamicFeature.class);
+        }
+        
         return classes;
     }
 

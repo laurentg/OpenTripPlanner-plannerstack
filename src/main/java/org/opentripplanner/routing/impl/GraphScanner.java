@@ -31,8 +31,6 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Scan for graphs under the base directory and auto-register them.
- * 
- * @see GraphServiceImpl
  */
 public class GraphScanner {
 
@@ -41,8 +39,8 @@ public class GraphScanner {
     /** Auto-scan for new graphs every n secs. */
     private static final int AUTOSCAN_PERIOD_SEC = 10;
 
-    /** Where to look for graphs */
-    public File basePath = new File("/var/otp/graphs");
+    /** Where to look for graphs. Defaults to 'graphs' under the OTP server base path. */
+    public File basePath = null;
 
     /** A list of routerIds to automatically register and load at startup */
     public List<String> autoRegister;
@@ -58,8 +56,9 @@ public class GraphScanner {
 
     private ScheduledExecutorService scanExecutor;
 
-    public GraphScanner(GraphService graphService, boolean autoScan) {
+    public GraphScanner(GraphService graphService, File basePath, boolean autoScan) {
         this.graphService = graphService;
+        this.basePath = basePath;
         if (autoScan) {
             scanExecutor = Executors.newSingleThreadScheduledExecutor();
         }
@@ -84,8 +83,7 @@ public class GraphScanner {
             for (String routerId : routerIds) {
                 InputStreamGraphSource graphSource = InputStreamGraphSource.newFileGraphSource(
                         routerId, getBasePath(routerId), loadLevel);
-                if (graphSource.getGraph() != null)
-                    graphService.registerGraph(routerId, graphSource);
+                graphService.registerGraph(routerId, graphSource);
             }
         } else {
             LOG.info("No list of routerIds was provided for automatic registration.");
@@ -135,10 +133,8 @@ public class GraphScanner {
             for (String routerId : graphToRegister) {
                 InputStreamGraphSource graphSource = InputStreamGraphSource.newFileGraphSource(
                         routerId, getBasePath(routerId), loadLevel);
-                if (graphSource.getGraph() != null) {
-                    // Can be null here if the file has been removed in the meantime.
-                    graphService.registerGraph(routerId, graphSource);
-                }
+                // Can be null here if the file has been removed in the meantime.
+                graphService.registerGraph(routerId, graphSource);
             }
         }
         /*
@@ -152,7 +148,7 @@ public class GraphScanner {
         } else {
             try {
                 // Check if we still have a default graph.
-                graphService.getGraph();
+                graphService.getRouter();
             } catch (GraphNotFoundException e) {
                 // Let's see which one we want to take by default
                 if (routerIds.contains("")) {

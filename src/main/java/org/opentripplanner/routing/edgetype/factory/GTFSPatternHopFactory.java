@@ -42,25 +42,15 @@ import org.opentripplanner.common.geometry.GeometryUtils;
 import org.opentripplanner.common.geometry.PackedCoordinateSequence;
 import org.opentripplanner.common.geometry.SphericalDistanceLibrary;
 import org.opentripplanner.common.model.P2;
-import org.opentripplanner.graph_builder.annotation.BogusShapeDistanceTraveled;
-import org.opentripplanner.graph_builder.annotation.BogusShapeGeometry;
-import org.opentripplanner.graph_builder.annotation.BogusShapeGeometryCaught;
-import org.opentripplanner.graph_builder.annotation.HopSpeedFast;
-import org.opentripplanner.graph_builder.annotation.HopSpeedSlow;
-import org.opentripplanner.graph_builder.annotation.HopZeroTime;
-import org.opentripplanner.graph_builder.annotation.NegativeDwellTime;
-import org.opentripplanner.graph_builder.annotation.NegativeHopTime;
-import org.opentripplanner.graph_builder.annotation.NonStationParentStation;
-import org.opentripplanner.graph_builder.annotation.RepeatedStops;
-import org.opentripplanner.graph_builder.annotation.TripDegenerate;
-import org.opentripplanner.graph_builder.annotation.TripUndefinedService;
+import org.opentripplanner.graph_builder.annotation.*;
 import org.opentripplanner.gtfs.GtfsContext;
+import org.opentripplanner.gtfs.GtfsLibrary;
 import org.opentripplanner.model.StopPattern;
 import org.opentripplanner.routing.core.StopTransfer;
 import org.opentripplanner.routing.core.TransferTable;
+import org.opentripplanner.routing.core.TraverseMode;
 import org.opentripplanner.routing.edgetype.FreeEdge;
 import org.opentripplanner.routing.edgetype.PathwayEdge;
-import org.opentripplanner.routing.edgetype.PatternHop;
 import org.opentripplanner.routing.edgetype.PatternInterlineDwell;
 import org.opentripplanner.routing.edgetype.PreAlightEdge;
 import org.opentripplanner.routing.edgetype.PreBoardEdge;
@@ -301,7 +291,7 @@ public class GTFSPatternHopFactory {
 
     private GtfsStopContext context = new GtfsStopContext();
 
-    private int defaultStreetToStopTime;
+    public int subwayAccessTime = 0;
 
     private static final DistanceLibrary distanceLibrary = SphericalDistanceLibrary.getInstance();
 
@@ -355,8 +345,17 @@ public class GTFSPatternHopFactory {
         /* Then loop over all trips, handling each one as a frequency-based or scheduled trip. */
         int freqCount = 0;
         int nonFreqCount = 0;
+        
+        /* The hops don't actually exist when we build their geometries, but we have to build their geometries
+         * below, before we throw away the modified stopTimes, saving only the tripTimes (which don't have enough
+         * information to build a geometry). So we keep them here.
+         * 
+         *  A trip pattern actually does not have a single geometry, but one per hop, so we store an array.
+         *  FIXME _why_ doesn't it have a single geometry?
+         */
+        Map<TripPattern, LineString[]> geometriesByTripPattern = Maps.newHashMap();
+        
         TRIP : for (Trip trip : trips) {
-
             if (++tripCount % 100000 == 0) {
                 LOG.debug("loading trips {}/{}", tripCount, trips.size());
             }
@@ -364,6 +363,7 @@ public class GTFSPatternHopFactory {
             // TODO: move to a validator module
             if ( ! _calendarService.getServiceIds().contains(trip.getServiceId())) {
                 LOG.warn(graph.addBuilderAnnotation(new TripUndefinedService(trip)));
+                continue TRIP; // Invalid trip, skip it, it will break later
             }
 
             /* Fetch the stop times for this trip. Copy the list since it's immutable. */
@@ -408,9 +408,22 @@ public class GTFSPatternHopFactory {
                 tripPattern.add(tripTimes);
                 nonFreqCount++;
             }
+            
+            // create geometries if they aren't already created
+            // note that this is not only done on new trip patterns, because it is possible that
+            // there would be a trip pattern with no geometry yet because it failed some of these tests
+            if (!geometriesByTripPattern.containsKey(tripPattern) && 
+                    trip.getShapeId() != null && trip.getShapeId().getId() != null &&
+                    !trip.getShapeId().getId().equals("")) {
+                // save the geometry to later be applied to the hops
+                geometriesByTripPattern.put(tripPattern,  createGeometry(graph, trip, stopTimes));
+            }
+
 
         } // end foreach TRIP
         LOG.info("Added {} frequency-based and {} single-trip timetable entries.", freqCount, nonFreqCount);
+        graph.hasFrequencyService = graph.hasFrequencyService || freqCount > 0;
+        graph.hasScheduledService = graph.hasScheduledService || nonFreqCount > 0;
 
         /* Generate unique human-readable names for all the TableTripPatterns. */
         TripPattern.generateUniqueNames(tripPatterns.values());
@@ -418,22 +431,35 @@ public class GTFSPatternHopFactory {
         /* Generate unique short IDs for all the TableTripPatterns. */
         TripPattern.generateUniqueIds(tripPatterns.values());
 
-        /* Loop over all new TripPatterns, creating the vertices and edges for each pattern. */
+        /* Loop over all new TripPatterns, creating edges, setting the service codes and geometries, etc. */
         for (TripPattern tripPattern : tripPatterns.values()) {
             tripPattern.makePatternVerticesAndEdges(graph, context);
+            // Add the geometries to the hop edges.
+            LineString[] geom = geometriesByTripPattern.get(tripPattern);
+            if (geom != null) {
+                for (int i = 0; i < tripPattern.hopEdges.length; i++) {
+                    tripPattern.hopEdges[i].setGeometry(geom[i]);
+                }
+                // Make a geometry for the whole TripPattern from all its constituent hops.
+                // This happens only if geometry is found in geometriesByTripPattern,
+                // because that means that geometry was created from shapes instead "as crow flies"
+                tripPattern.makeGeometry();
+            }
             tripPattern.setServiceCodes(graph.serviceCodes); // TODO this could be more elegant
-            for (Trip trip : tripPattern.getTrips()) {
-                // FIXME: Compute geometry sanely, preferably for each trip individually.
-                if (trip.getShapeId() != null && trip.getShapeId().getId() != null &&
-                        !trip.getShapeId().getId().equals("")) {
-                    createGeometry(graph, trip, tripPattern.hopEdges);
-                    break;  // We can only store one geometry per pattern, so this one has to be it.
+
+            /* Iterate over all stops in this pattern recording mode information. */
+            TraverseMode mode = GtfsLibrary.getTraverseMode(tripPattern.route);
+            for (TransitStop tstop : tripPattern.stopVertices) {
+                tstop.addMode(mode);
+                if (mode == TraverseMode.SUBWAY) {
+                    tstop.setStreetToStopTime(subwayAccessTime);
                 }
             }
+
         }
 
         /* Identify interlined trips and create the necessary edges. */
-        interline(tripPatterns.values());
+        interline(tripPatterns.values(), graph);
 
         /* Interpret the transfers explicitly defined in transfers.txt. */
         loadTransfers(graph);
@@ -454,7 +480,7 @@ public class GTFSPatternHopFactory {
      * and update the TripPatterns accordingly. This must be called after all the pattern edges and vertices
      * are already created, because it creates interline dwell edges between existing pattern arrive/depart vertices.
      */
-    private void interline (Collection<TripPattern> tripPatterns) {
+    private void interline (Collection<TripPattern> tripPatterns, Graph graph) {
 
         /* Record which Pattern each interlined TripTimes belongs to. */
         Map<TripTimes, TripPattern> patternForTripTimes = Maps.newHashMap();
@@ -491,13 +517,25 @@ public class GTFSPatternHopFactory {
             for (TripTimes curr : blockTripTimes) {
                 if (prev != null) {
                     if (prev.getDepartureTime(prev.getNumStops() - 1) > curr.getArrivalTime(0)) {
-                        LOG.error("Trip times within block {} on service {} are not increasing on service {} after trip {}.",
+                        LOG.error("Trip times within block {} are not increasing on service {} after trip {}.",
                                 block.blockId, block.serviceId, prev.trip.getId());
                         continue SERVICE_BLOCK;
                     }
                     TripPattern prevPattern = patternForTripTimes.get(prev);
                     TripPattern currPattern = patternForTripTimes.get(curr);
-                    interlines.put(new P2<TripPattern>(prevPattern, currPattern), new P2<Trip>(prev.trip, curr.trip));
+                    Stop fromStop = prevPattern.getStop(prevPattern.getStops().size() - 1);
+                    Stop toStop   = currPattern.getStop(0);
+                    double teleportationDistance = distanceLibrary.fastDistance(
+                                        fromStop.getLat(), fromStop.getLon(), toStop.getLat(), toStop.getLon());
+                    if (teleportationDistance > 200) {
+                        // FIXME Trimet data contains a lot of these -- in their data, two trips sharing a block ID just
+                        // means that they are served by the same vehicle, not that interlining is automatically allowed.
+                        // see #1654
+                        // LOG.error(graph.addBuilderAnnotation(new InterliningTeleport(prev.trip, block.blockId, (int)teleportationDistance)));
+                        // Only skip this particular interline edge; there may be other valid ones in the block.
+                    } else {
+                        interlines.put(new P2<TripPattern>(prevPattern, currPattern), new P2<Trip>(prev.trip, curr.trip));
+                    }
                 }
                 prev = curr;
             }
@@ -519,23 +557,32 @@ public class GTFSPatternHopFactory {
         LOG.info("Done finding interlining trips and creating the corresponding edges.");
     }
 
-    private void createGeometry(Graph graph, Trip trip, PatternHop hops[]) {
+    /**
+     * Creates a set of geometries for a single trip, considering the GTFS shapes.txt,
+     * The geometry is broken down into one geometry per inter-stop segment ("hop"). We also need a shape for the entire
+     * trip and tripPattern, but given the complexity of the existing code for generating hop geometries, we will create
+     * the full-trip geometry by simply concatenating the hop geometries.
+     *
+     * This geometry will in fact be used for an entire set of trips in a trip pattern. Technically one of the trips
+     * with exactly the same sequence of stops could follow a different route on the streets, but that's very uncommon.
+     */
+    private LineString[] createGeometry(Graph graph, Trip trip, List<StopTime> stopTimes) {
         AgencyAndId shapeId = trip.getShapeId();
-        List<StopTime> stopTimes = _dao.getStopTimesForTrip(trip);
         
-        /* Detect presence or absence of shape_dist_traveled on a per-trip basis */
+        // One less geometry than stoptime as array indexes represetn hops not stops (fencepost problem).
+        LineString[] geoms = new LineString[stopTimes.size() - 1];
+        
+        // Detect presence or absence of shape_dist_traveled on a per-trip basis
         StopTime st0 = stopTimes.get(0);
         boolean hasShapeDist = st0.isShapeDistTraveledSet();
-        if (hasShapeDist) { 
+        if (hasShapeDist) {
             // this trip has shape_dist in stop_times
-            for (int i = 0; i < hops.length; ++i) {
-                if (hops[i] == null) continue;
+            for (int i = 0; i < stopTimes.size() - 1; ++i) {
                 st0 = stopTimes.get(i);
                 StopTime st1 = stopTimes.get(i + 1);
-                hops[i].setGeometry(getHopGeometryViaShapeDistTraveled(graph, shapeId, st0, st1,
-                        hops[i].getFromVertex(), hops[i].getToVertex()));
+                geoms[i] = getHopGeometryViaShapeDistTraveled(graph, shapeId, st0, st1);
             }
-            return;
+            return geoms;
         }
         LineString shape = getLineStringForShapeId(shapeId);
         if (shape == null) {
@@ -545,9 +592,9 @@ public class GTFSPatternHopFactory {
                 st0 = stopTimes.get(i);
                 StopTime st1 = stopTimes.get(i + 1);
                 LineString geometry = createSimpleGeometry(st0.getStop(), st1.getStop());
-                hops[i].setGeometry(geometry);
+                geoms[i] = geometry;
             }
-            return;
+            return geoms;
         }
         // This trip does not have shape_dist in stop_times, but does have an associated shape.
         ArrayList<IndexedLineSegment> segments = new ArrayList<IndexedLineSegment>();
@@ -614,23 +661,21 @@ public class GTFSPatternHopFactory {
             // linking, even though theoretically we could do better.
 
             for (int i = 0; i < stopTimes.size() - 1; ++i) {
-                if (hops[i] == null) continue;
                 st0 = stopTimes.get(i);
                 StopTime st1 = stopTimes.get(i + 1);
                 LineString geometry = createSimpleGeometry(st0.getStop(), st1.getStop());
-                hops[i].setGeometry(geometry);
+                geoms[i] = geometry;
                 //this warning is not strictly correct, but will do
                 LOG.warn(graph.addBuilderAnnotation(new BogusShapeGeometryCaught(shapeId, st0, st1)));
             }
-            return;
+            return geoms;
         }
 
         Iterator<LinearLocation> locationIt = locations.iterator();
         LinearLocation endLocation = locationIt.next();
         double distanceSoFar = 0;
         int last = 0;
-        for (int i = 0; i < hops.length; ++i) {
-            if (hops[i] == null) continue;
+        for (int i = 0; i < stopTimes.size() - 1; ++i) {
             LinearLocation startLocation = endLocation;
             endLocation = locationIt.next();
 
@@ -670,8 +715,10 @@ public class GTFSPatternHopFactory {
                         .getCoordinates(), 2);
                 geometry = _geometryFactory.createLineString(sequence);
             }
-            hops[i].setGeometry(geometry);
+            geoms[i] = geometry;
         }
+        
+        return geoms;
     }
 
     /**
@@ -861,9 +908,7 @@ public class GTFSPatternHopFactory {
                 context.stationStopNodes.put(stop, new TransitStation(graph, stop));
             } else {
                 TransitStop stopVertex = new TransitStop(graph, stop);
-                stopVertex.setStreetToStopTime(defaultStreetToStopTime);
                 context.stationStopNodes.put(stop, stopVertex);
-
                 if (locationType != 2) {
                     // Add a vertex representing arriving at the stop
                     TransitStopArrive arrive = new TransitStopArrive(graph, stop, stopVertex);
@@ -1014,8 +1059,7 @@ public class GTFSPatternHopFactory {
     }
 
     
-    private LineString getHopGeometryViaShapeDistTraveled(Graph graph, AgencyAndId shapeId, StopTime st0, StopTime st1,
-            Vertex startJourney, Vertex endJourney) {
+    private LineString getHopGeometryViaShapeDistTraveled(Graph graph, AgencyAndId shapeId, StopTime st0, StopTime st1) {
 
         double startDistance = st0.getShapeDistTraveled();
         double endDistance = st1.getShapeDistTraveled();
@@ -1258,7 +1302,7 @@ public class GTFSPatternHopFactory {
      * it's important to provide in-station transfers for fare computation).
      * 
      * This step used to be automatically applied whenever transfers.txt was used to create 
-     * transfers (rathen than or in addition to transfers through the street netowrk), 
+     * transfers (rather than or in addition to transfers through the street netowrk),
      * but has been separated out since it is really a separate process.
      */
     public void createParentStationTransfers () {
@@ -1361,14 +1405,6 @@ public class GTFSPatternHopFactory {
             LineString geometry = _geometryFactory.createLineString(sequence);
             transferEdge.setGeometry(geometry);
         }
-    }
-
-    public int getDefaultStreetToStopTime() {
-        return defaultStreetToStopTime;
-    }
-
-    public void setDefaultStreetToStopTime(int defaultStreetToStopTime) {
-        this.defaultStreetToStopTime = defaultStreetToStopTime;
     }
 
     public void setStopContext(GtfsStopContext context) {

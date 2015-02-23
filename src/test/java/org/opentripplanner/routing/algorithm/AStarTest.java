@@ -30,8 +30,9 @@ import org.opentripplanner.routing.core.RoutingRequest;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.routing.graph.SimpleConcreteEdge;
 import org.opentripplanner.routing.graph.SimpleConcreteVertex;
+import org.opentripplanner.routing.graph.TemporaryConcreteEdge;
 import org.opentripplanner.routing.graph.Vertex;
-import org.opentripplanner.routing.location.StreetLocation;
+import org.opentripplanner.routing.location.TemporaryStreetLocation;
 import org.opentripplanner.routing.spt.GraphPath;
 import org.opentripplanner.routing.spt.ShortestPathTree;
 
@@ -97,7 +98,7 @@ public class AStarTest {
         RoutingRequest options = new RoutingRequest();
         options.walkSpeed = 1.0;
         options.setRoutingContext(_graph, _graph.getVertex("56th_24th"), _graph.getVertex("leary_20th"));
-        ShortestPathTree tree = new GenericAStar().getShortestPathTree(options);
+        ShortestPathTree tree = new AStar().getShortestPathTree(options);
 
         GraphPath path = tree.getPath(_graph.getVertex("leary_20th"), false);
 
@@ -122,7 +123,7 @@ public class AStarTest {
         options.setArriveBy(true);
         options.setRoutingContext(_graph, _graph.getVertex("56th_24th"),
                 _graph.getVertex("leary_20th"));
-        ShortestPathTree tree = new GenericAStar().getShortestPathTree(options);
+        ShortestPathTree tree = new AStar().getShortestPathTree(options);
 
         GraphPath path = tree.getPath(_graph.getVertex("56th_24th"), false);
 
@@ -155,20 +156,19 @@ public class AStarTest {
         RoutingRequest options = new RoutingRequest();
         options.walkSpeed = 1.0;
 
-        StreetLocation fromLocation = new StreetLocation(_graph, "near_shilshole_22nd",
-                new Coordinate(-122.385050, 47.666620), "near_shilshole_22nd");
-        fromLocation.getExtra().add(
-                new SimpleConcreteEdge(fromLocation, _graph.getVertex("shilshole_22nd")));
+        TemporaryStreetLocation from = new TemporaryStreetLocation("near_shilshole_22nd",
+                new Coordinate(-122.385050, 47.666620), "near_shilshole_22nd", false);
+        new TemporaryConcreteEdge(from, _graph.getVertex("shilshole_22nd"));
 
-        StreetLocation toLocation = new StreetLocation(_graph, "near_56th_20th", new Coordinate(
-                -122.382347, 47.669518), "near_56th_20th");
-        toLocation.getExtra()
-                .add(new SimpleConcreteEdge(_graph.getVertex("56th_20th"), toLocation));
+        TemporaryStreetLocation to = new TemporaryStreetLocation("near_56th_20th",
+                new Coordinate(-122.382347, 47.669518), "near_56th_20th", true);
+        new TemporaryConcreteEdge(_graph.getVertex("56th_20th"), to);
 
-        options.setRoutingContext(_graph, fromLocation, toLocation);
-        ShortestPathTree tree = new GenericAStar().getShortestPathTree(options);
+        options.setRoutingContext(_graph, from, to);
+        ShortestPathTree tree = new AStar().getShortestPathTree(options);
+        options.cleanup();
 
-        GraphPath path = tree.getPath(toLocation, false);
+        GraphPath path = tree.getPath(to, false);
 
         List<State> states = path.states;
 
@@ -192,20 +192,19 @@ public class AStarTest {
         options.walkSpeed = 1.0;
         options.setArriveBy(true);
 
-        StreetLocation fromLocation = new StreetLocation(_graph, "near_shilshole_22nd",
-                new Coordinate(-122.385050, 47.666620), "near_shilshole_22nd");
-        fromLocation.getExtra().add(
-                new SimpleConcreteEdge(fromLocation, _graph.getVertex("shilshole_22nd")));
+        TemporaryStreetLocation from = new TemporaryStreetLocation("near_shilshole_22nd",
+                new Coordinate(-122.385050, 47.666620), "near_shilshole_22nd", false);
+        new TemporaryConcreteEdge(from, _graph.getVertex("shilshole_22nd"));
 
-        StreetLocation toLocation = new StreetLocation(_graph, "near_56th_20th", new Coordinate(
-                -122.382347, 47.669518), "near_56th_20th");
-        toLocation.getExtra()
-                .add(new SimpleConcreteEdge(_graph.getVertex("56th_20th"), toLocation));
+        TemporaryStreetLocation to = new TemporaryStreetLocation("near_56th_20th",
+                new Coordinate(-122.382347, 47.669518), "near_56th_20th", true);
+        new TemporaryConcreteEdge(_graph.getVertex("56th_20th"), to);
 
-        options.setRoutingContext(_graph, fromLocation, toLocation);
-        ShortestPathTree tree = new GenericAStar().getShortestPathTree(options);
+        options.setRoutingContext(_graph, from, to);
+        ShortestPathTree tree = new AStar().getShortestPathTree(options);
+        options.cleanup();
 
-        GraphPath path = tree.getPath(fromLocation, false);
+        GraphPath path = tree.getPath(from, false);
 
         List<State> states = path.states;
 
@@ -236,7 +235,7 @@ public class AStarTest {
         targets.add(_graph.getVertex("leary_20th"));
 
         SearchTerminationStrategy strategy = new MultiTargetTerminationStrategy(targets);
-        ShortestPathTree tree = new GenericAStar().getShortestPathTree(options, -1, strategy);
+        ShortestPathTree tree = new AStar().getShortestPathTree(options, -1, strategy);
 
         for (Vertex v : targets) {
             GraphPath path = tree.getPath(v, false);

@@ -1,5 +1,6 @@
 package org.opentripplanner.standalone;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.BindException;
 
@@ -8,6 +9,7 @@ import org.glassfish.grizzly.http.server.CLStaticHttpHandler;
 import org.glassfish.grizzly.http.server.HttpHandler;
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.grizzly.http.server.NetworkListener;
+import org.glassfish.grizzly.http.server.StaticHttpHandler;
 import org.glassfish.grizzly.ssl.SSLContextConfigurator;
 import org.glassfish.grizzly.ssl.SSLEngineConfigurator;
 import org.glassfish.grizzly.threadpool.ThreadPoolConfig;
@@ -47,12 +49,12 @@ public class GrizzlyServer {
         
         LOG.info("Starting OTP Grizzly server on ports {} (HTTP) and {} (HTTPS) of interface {}",
             params.port, params.securePort, params.bindAddress);
-        LOG.info("Base path is X, graphs are at {}", params.graphDirectory);
+        LOG.info("OTP server base path is {}", params.basePath);
         HttpServer httpServer = new HttpServer();
 
         /* Configure SSL */
         SSLContextConfigurator sslConfig = new SSLContextConfigurator();
-        sslConfig.setKeyStoreFile("/var/otp/ssh/keystore_server");
+        sslConfig.setKeyStoreFile(new File(params.basePath, "keystore").getAbsolutePath());
         sslConfig.setKeyStorePass("opentrip");
 
         /* OTP is CPU-bound, so we want only as many worker threads as we have cores. */
@@ -88,13 +90,24 @@ public class GrizzlyServer {
         /* Add a few handlers (~= servlets) to the Grizzly server. */
 
         /* 1. A Grizzly wrapper around the Jersey Application. */
-        Application app = new OTPApplication(server);
+        Application app = new OTPApplication(server, !params.insecure);
         HttpHandler dynamicHandler = ContainerFactory.createContainer(HttpHandler.class, app);
         httpServer.getServerConfiguration().addHttpHandler(dynamicHandler, "/otp/");
 
         /* 2. A static content handler to serve the client JS apps etc. from the classpath. */
         HttpHandler staticHandler = new CLStaticHttpHandler(GrizzlyServer.class.getClassLoader(), "/client/");
         httpServer.getServerConfiguration().addHttpHandler(staticHandler, "/");
+
+        /*
+         * 3. A static content handler to serve local files from the filesystem, under the "local"
+         * path.
+         */
+        if (params.clientDirectory != null) {
+            StaticHttpHandler localHandler = new StaticHttpHandler(
+                    params.clientDirectory.getAbsolutePath());
+            localHandler.setFileCacheEnabled(false);
+            httpServer.getServerConfiguration().addHttpHandler(localHandler, "/local");
+        }
 
         /* 3. Test alternate method (no Jersey). */
         // As in servlets, * is needed in base path to identify the "rest" of the path.

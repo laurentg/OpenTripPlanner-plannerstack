@@ -28,11 +28,12 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.CacheControl;
-import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 
+import org.geotools.data.DefaultTransaction;
+import org.geotools.data.Transaction;
 import org.geotools.data.shapefile.ShapefileDataStore;
 import org.geotools.data.simple.SimpleFeatureCollection;
 import org.geotools.data.simple.SimpleFeatureStore;
@@ -44,11 +45,10 @@ import org.geotools.referencing.crs.DefaultGeographicCRS;
 import org.opengis.feature.simple.SimpleFeatureType;
 import org.opentripplanner.analyst.core.IsochroneData;
 import org.opentripplanner.analyst.request.IsoChroneRequest;
-import org.opentripplanner.analyst.request.IsoChroneSPTRendererAccSampling;
-import org.opentripplanner.analyst.request.IsoChroneSPTRendererRecursiveGrid;
 import org.opentripplanner.api.common.RoutingResource;
 import org.opentripplanner.common.model.GenericLocation;
 import org.opentripplanner.routing.core.RoutingRequest;
+import org.opentripplanner.standalone.Router;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,12 +71,6 @@ public class LIsochrone extends RoutingResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(LIsochrone.class);
 
-    @Context // FIXME inject Application context
-    private IsoChroneSPTRendererAccSampling accSamplingRenderer;
-
-    @Context // FIXME inject Application context
-    private IsoChroneSPTRendererRecursiveGrid recursiveGridRenderer;
-
     @QueryParam("cutoffSec")
     private List<Integer> cutoffSecList;
 
@@ -85,9 +79,6 @@ public class LIsochrone extends RoutingResource {
 
     @QueryParam("debug")
     private Boolean debug;
-
-    @QueryParam("algorithm")
-    private String algorithm;
 
     @QueryParam("precisionMeters")
     @DefaultValue("200")
@@ -122,8 +113,18 @@ public class LIsochrone extends RoutingResource {
         LOG.debug("writing out shapefile {}", shapeFile);
         ShapefileDataStore outStore = new ShapefileDataStore(shapeFile.toURI().toURL());
         outStore.createSchema(contourSchema);
+        Transaction transaction = new DefaultTransaction("create");
         SimpleFeatureStore featureStore = (SimpleFeatureStore) outStore.getFeatureSource();
-        featureStore.addFeatures(contourFeatures);
+        featureStore.setTransaction(transaction);
+        try {
+            featureStore.addFeatures(contourFeatures);
+            transaction.commit();
+        } catch (Exception e) {
+            transaction.rollback();
+            throw e;
+        } finally {
+            transaction.close();
+        }
         shapeDir.deleteOnExit(); // Note: the order is important
         for (File f : shapeDir.listFiles())
             f.deleteOnExit();
@@ -184,15 +185,8 @@ public class LIsochrone extends RoutingResource {
             isoChroneRequest.maxTimeSec = isoChroneRequest.maxCutoffSec;
         }
 
-        List<IsochroneData> isochrones;
-        if (algorithm == null || "accSampling".equals(algorithm)) {
-            isochrones = accSamplingRenderer.getIsochrones(isoChroneRequest, sptRequest);
-        } else if ("recursiveGrid".equals(algorithm)) {
-            isochrones = recursiveGridRenderer.getIsochrones(isoChroneRequest, sptRequest);
-        } else {
-            throw new IllegalArgumentException("Unknown algorithm: " + algorithm);
-        }
-        return isochrones;
+        Router router = otpServer.getRouter(routerId);
+        return router.isoChroneSPTRenderer.getIsochrones(isoChroneRequest, sptRequest);
     }
 
     static SimpleFeatureType makeContourSchema() {
@@ -200,17 +194,18 @@ public class LIsochrone extends RoutingResource {
         SimpleFeatureTypeBuilder tbuilder = new SimpleFeatureTypeBuilder();
         tbuilder.setName("contours");
         tbuilder.setCRS(DefaultGeographicCRS.WGS84);
-        tbuilder.add("Geometry", MultiPolygon.class);
-        tbuilder.add("Time", Integer.class); // TODO change to something more descriptive and lowercase
+        // Do not use "geom" or "geometry" below, it seems to broke shapefile generation
+        tbuilder.add("the_geom", MultiPolygon.class);
+        tbuilder.add("time", Integer.class); // TODO change to something more descriptive and lowercase
         return tbuilder.buildFeatureType();
     }
 
     // TODO Extract this to utility package?
     private static class DirectoryZipper implements StreamingOutput {
         private File directory;
-        
-        DirectoryZipper(File directory){
-        	this.directory = directory;
+
+        DirectoryZipper(File directory) {
+            this.directory = directory;
         }
 
         @Override

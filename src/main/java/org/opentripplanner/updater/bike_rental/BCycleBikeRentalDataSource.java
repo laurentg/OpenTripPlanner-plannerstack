@@ -21,11 +21,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 /**
  * Build a BikeRentalStation object from a B-Cycle data source JsonNode object.
  *
- * @see GenericJSONBikeRentalDataSource
+ * @see GenericJsonBikeRentalDataSource
  */
-public class BCycleBikeRentalDataSource extends GenericJSONBikeRentalDataSource {
-   public BCycleBikeRentalDataSource() {
-       super("d/list");
+public class BCycleBikeRentalDataSource extends GenericJsonBikeRentalDataSource {
+
+    public BCycleBikeRentalDataSource(String apiKey) {
+       super("", apiKey);
    }
 
    public BikeRentalStation makeStation(JsonNode kioskNode) {

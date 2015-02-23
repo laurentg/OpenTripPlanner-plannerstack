@@ -100,7 +100,7 @@ class Ride {
 }
 
 /**
- * This fare service impl handles the cases that GTFS handles within a single feed. 
+ * This fare service module handles the cases that GTFS handles within a single feed.
  * It cannot necessarily handle multi-feed graphs, because a rule-less fare attribute
  * might be applied to rides on routes in another feed, for example.
  * For more interesting fare structures like New York's MTA, or cities with multiple
@@ -268,10 +268,7 @@ public class DefaultFareServiceImpl implements FareService, Serializable {
         }
         LOG.debug("{} best for {}", bestAttribute, rides);
         if (bestFare == Float.POSITIVE_INFINITY) {
-            if (fareAttributes.isEmpty())
-                LOG.info("No fare for a ride sequence: {}", rides);
-            else
-                LOG.warn("No fare for a ride sequence: {}", rides);
+            LOG.debug("No fare for a ride sequence: {}", rides);
         }
         return bestFare;
 

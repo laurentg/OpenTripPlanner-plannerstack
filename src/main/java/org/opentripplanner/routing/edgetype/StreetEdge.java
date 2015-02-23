@@ -31,6 +31,7 @@ import org.opentripplanner.routing.core.StateEditor;
 import org.opentripplanner.routing.core.TraverseMode;
 import org.opentripplanner.routing.core.TraverseModeSet;
 import org.opentripplanner.routing.graph.Edge;
+import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.routing.util.ElevationUtils;
 import org.opentripplanner.routing.vertextype.IntersectionVertex;
 import org.opentripplanner.routing.vertextype.StreetVertex;
@@ -107,8 +108,6 @@ public class StreetEdge extends Edge implements Cloneable {
      * this street segment.
      */
     private float carSpeed;
-
-    private List<TurnRestriction> turnRestrictions = Collections.emptyList();
 
     /**
      * The angle at the start of the edge geometry.
@@ -484,7 +483,7 @@ public class StreetEdge extends Edge implements Cloneable {
     /**
      * Calculate the speed appropriately given the RoutingRequest and traverseMode.
      */
-    private double calculateSpeed(RoutingRequest options, TraverseMode traverseMode) {
+    public double calculateSpeed(RoutingRequest options, TraverseMode traverseMode) {
         if (traverseMode == null) {
             return Double.NaN;
         } else if (traverseMode.isDriving()) {
@@ -525,21 +524,9 @@ public class StreetEdge extends Edge implements Cloneable {
     }
 
     public String toString() {
-        return "PlainStreetEdge(" + getId() + ", " + name + ", " + fromv + " -> " + tov
+        return "StreetEdge(" + getId() + ", " + name + ", " + fromv + " -> " + tov
                 + " length=" + this.getDistance() + " carSpeed=" + this.getCarSpeed()
                 + " permission=" + this.getPermission() + ")";
-    }
-
-    /** Returns true if there are any turn restrictions defined. */
-    public boolean hasExplicitTurnRestrictions() {
-        return this.turnRestrictions != null && this.turnRestrictions.size() > 0;
-    }
-
-    public void addTurnRestriction(TurnRestriction turnRestriction) {
-        if (turnRestrictions.isEmpty()) {
-            turnRestrictions = new ArrayList<TurnRestriction>();
-        }
-        turnRestrictions.add(turnRestriction);
     }
 
     @Override
@@ -552,41 +539,25 @@ public class StreetEdge extends Edge implements Cloneable {
     }
     
     public boolean canTurnOnto(Edge e, State state, TraverseMode mode) {
-        for (TurnRestriction restriction : turnRestrictions) {
-            /* FIXME: This is wrong for trips that end in the middle of restriction.to
+        for (TurnRestriction turnRestriction : getTurnRestrictions(state.getOptions().rctx.graph)) {
+            /* FIXME: This is wrong for trips that end in the middle of turnRestriction.to
              */
 
             // NOTE(flamholz): edge to be traversed decides equivalence. This is important since 
             // it might be a temporary edge that is equivalent to some graph edge.
-            if (restriction.type == TurnRestrictionType.ONLY_TURN) {
-                if (!e.isEquivalentTo(restriction.to) && restriction.modes.contains(mode) &&
-                        restriction.active(state.getTimeSeconds())) {
+            if (turnRestriction.type == TurnRestrictionType.ONLY_TURN) {
+                if (!e.isEquivalentTo(turnRestriction.to) && turnRestriction.modes.contains(mode) &&
+                        turnRestriction.active(state.getTimeSeconds())) {
                     return false;
                 }
             } else {
-                if (e.isEquivalentTo(restriction.to) && restriction.modes.contains(mode) &&
-                        restriction.active(state.getTimeSeconds())) {
+                if (e.isEquivalentTo(turnRestriction.to) && turnRestriction.modes.contains(mode) &&
+                        turnRestriction.active(state.getTimeSeconds())) {
                     return false;
                 }
             }
         }
         return true;
-    }
-
-    protected boolean detachFrom() {
-        if (fromv != null) {
-            for (Edge e : fromv.getIncoming()) {
-                if (!(e instanceof StreetEdge)) continue;
-                StreetEdge pse = (StreetEdge) e;
-                ArrayList<TurnRestriction> restrictions = new ArrayList<TurnRestriction>(pse.turnRestrictions);
-                for (TurnRestriction restriction : restrictions) {
-                    if (restriction.to == this) {
-                        pse.turnRestrictions.remove(restriction);
-                    }
-                }
-            }
-        }
-        return super.detachFrom();
     }
 
 	@Override
@@ -701,10 +672,6 @@ public class StreetEdge extends Edge implements Cloneable {
 	    flags = BitSetUtils.set(flags, SLOPEOVERRIDE_FLAG_INDEX, slopeOverride);
 	}
 
-	public List<TurnRestriction> getTurnRestrictions() {
-		return this.turnRestrictions;
-	}
-
     /**
      * Return the azimuth of the first segment in this edge in integer degrees clockwise from South.
      * TODO change everything to clockwise from North
@@ -718,4 +685,7 @@ public class StreetEdge extends Edge implements Cloneable {
 		return this.outAngle * 180 / 128;
 	}
 
+    protected List<TurnRestriction> getTurnRestrictions(Graph graph) {
+        return graph.getTurnRestrictions(this);
+    }
 }

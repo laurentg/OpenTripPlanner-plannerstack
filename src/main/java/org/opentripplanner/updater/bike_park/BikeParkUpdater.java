@@ -24,18 +24,17 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.prefs.Preferences;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import org.opentripplanner.routing.bike_park.BikePark;
 import org.opentripplanner.routing.bike_rental.BikeRentalStationService;
 import org.opentripplanner.routing.edgetype.BikeParkEdge;
-import org.opentripplanner.routing.edgetype.loader.LinkRequest;
 import org.opentripplanner.routing.edgetype.loader.NetworkLinkerLibrary;
-import org.opentripplanner.routing.graph.Edge;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.routing.vertextype.BikeParkVertex;
 import org.opentripplanner.updater.GraphUpdaterManager;
 import org.opentripplanner.updater.GraphWriterRunnable;
 import org.opentripplanner.updater.PollingGraphUpdater;
-import org.opentripplanner.updater.PreferencesConfigurable;
+import org.opentripplanner.updater.JsonConfigurable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,9 +81,9 @@ public class BikeParkUpdater extends PollingGraphUpdater {
     }
 
     @Override
-    protected void configurePolling(Graph graph, Preferences preferences) throws Exception {
+    protected void configurePolling(Graph graph, JsonNode config) throws Exception {
         // Set source from preferences
-        String sourceType = preferences.get("sourceType", null);
+        String sourceType = config.path("sourceType").asText();
         BikeParkDataSource source = null;
         if (sourceType != null) {
             if (sourceType.equals("kml-placemarks")) {
@@ -94,8 +93,8 @@ public class BikeParkUpdater extends PollingGraphUpdater {
 
         if (source == null) {
             throw new IllegalArgumentException("Unknown bike rental source type: " + sourceType);
-        } else if (source instanceof PreferencesConfigurable) {
-            ((PreferencesConfigurable) source).configure(graph, preferences);
+        } else if (source instanceof JsonConfigurable) {
+            ((JsonConfigurable) source).configure(graph, config);
         }
 
         // Configure updater
@@ -156,11 +155,7 @@ public class BikeParkUpdater extends PollingGraphUpdater {
                 BikeParkVertex bikeParkVertex = verticesByPark.get(bikePark);
                 if (bikeParkVertex == null) {
                     bikeParkVertex = new BikeParkVertex(graph, bikePark);
-                    LinkRequest request = networkLinkerLibrary
-                            .connectVertexToStreets(bikeParkVertex);
-                    for (Edge e : request.getEdgesAdded()) {
-                        graph.addTemporaryEdge(e);
-                    }
+                    networkLinkerLibrary.connectVertexToStreets(bikeParkVertex);
                     verticesByPark.put(bikePark, bikeParkVertex);
                     new BikeParkEdge(bikeParkVertex);
                 } else {

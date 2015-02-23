@@ -22,11 +22,11 @@ import org.opentripplanner.analyst.core.SampleSource;
 import org.opentripplanner.common.geometry.RecursiveGridIsolineBuilder;
 import org.opentripplanner.common.geometry.RecursiveGridIsolineBuilder.ZFunc;
 import org.opentripplanner.common.geometry.SphericalDistanceLibrary;
+import org.opentripplanner.routing.algorithm.AStar;
 import org.opentripplanner.routing.core.RoutingRequest;
 import org.opentripplanner.routing.core.State;
+import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.routing.graph.Vertex;
-import org.opentripplanner.routing.services.GraphService;
-import org.opentripplanner.routing.services.SPTService;
 import org.opentripplanner.routing.spt.ShortestPathTree;
 import org.opentripplanner.routing.vertextype.StreetVertex;
 import org.slf4j.Logger;
@@ -44,14 +44,12 @@ public class IsoChroneSPTRendererRecursiveGrid implements IsoChroneSPTRenderer {
     private static final Logger LOG = LoggerFactory
             .getLogger(IsoChroneSPTRendererRecursiveGrid.class);
 
-    private GraphService graphService;
-    private SPTService sptService;
+    private Graph graph;
     private SampleSource sampleSource;
 
-    public IsoChroneSPTRendererRecursiveGrid(GraphService graphService, SPTService sptService, SampleSource sampleSource) {
-        this.graphService = graphService;
-        this.sptService = sptService;
-        this.sampleSource = sampleSource;
+    public IsoChroneSPTRendererRecursiveGrid(Graph graph) {
+        this.graph = graph;
+        this.sampleSource = graph.getSampleFactory();
     }
 
     /**
@@ -72,8 +70,9 @@ public class IsoChroneSPTRendererRecursiveGrid implements IsoChroneSPTRenderer {
         sptRequest.worstTime = (sptRequest.dateTime
                 + (sptRequest.arriveBy ? -isoChroneRequest.maxCutoffSec : isoChroneRequest.maxCutoffSec));
         sptRequest.batch = true;
-        sptRequest.setRoutingContext(graphService.getGraph(sptRequest.routerId));
-        final ShortestPathTree spt = sptService.getShortestPathTree(sptRequest);
+        sptRequest.setRoutingContext(graph);
+        // TODO handle different path dominance conditions
+        final ShortestPathTree spt = new AStar().getShortestPathTree(sptRequest);
         sptRequest.cleanup();
 
         // 2. Compute the set of initial points
@@ -84,7 +83,6 @@ public class IsoChroneSPTRendererRecursiveGrid implements IsoChroneSPTRenderer {
         ZFunc timeFunc = new ZFunc() {
             @Override
             public long z(Coordinate c) {
-                // TODO Make the sample source multi-router compatible
                 Sample sample = sampleSource.getSample(c.x, c.y);
                 if (sample == null) {
                     return Long.MAX_VALUE;

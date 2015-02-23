@@ -13,11 +13,10 @@
 
 package org.opentripplanner.routing.edgetype;
 
+import com.vividsolutions.jts.geom.LineString;
 import org.opentripplanner.routing.vertextype.IntersectionVertex;
 
-import com.vividsolutions.jts.geom.LineString;
-
-public class AreaEdge extends StreetWithElevationEdge {
+public class AreaEdge extends StreetWithElevationEdge implements EdgeWithCleanup {
     private static final long serialVersionUID = 6761687673982054612L;
     private AreaEdgeList area;
 
@@ -32,10 +31,10 @@ public class AreaEdge extends StreetWithElevationEdge {
     public AreaEdgeList getArea() {
         return area;
     }
-    
-    public int detach() {
+
+    @Override
+    public void detach() {
         area.removeEdge(this);
-        return super.detach();
     }
 
     public void setArea(AreaEdgeList area) {

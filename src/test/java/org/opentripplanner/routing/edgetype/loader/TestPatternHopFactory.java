@@ -36,7 +36,7 @@ import org.opentripplanner.graph_builder.annotation.GraphBuilderAnnotation;
 import org.opentripplanner.graph_builder.annotation.NegativeHopTime;
 import org.opentripplanner.gtfs.GtfsContext;
 import org.opentripplanner.gtfs.GtfsLibrary;
-import org.opentripplanner.routing.algorithm.GenericAStar;
+import org.opentripplanner.routing.algorithm.AStar;
 import org.opentripplanner.routing.core.OptimizeType;
 import org.opentripplanner.routing.core.RoutingRequest;
 import org.opentripplanner.routing.core.State;
@@ -62,7 +62,7 @@ import com.vividsolutions.jts.geom.Geometry;
 public class TestPatternHopFactory extends TestCase {
 
     private Graph graph;
-    private GenericAStar aStar = new GenericAStar();
+    private AStar aStar = new AStar();
     private GtfsContext context;
 
     public void setUp() throws Exception {
@@ -438,6 +438,7 @@ public class TestPatternHopFactory extends TestCase {
         Vertex near_a = graph.getVertex("near_1_agency_A");
         Vertex near_b = graph.getVertex("near_1_agency_B");
         Vertex near_c = graph.getVertex("near_1_agency_C");
+        Vertex near_e = graph.getVertex("near_1_agency_E");
 
         Vertex stop_d = graph.getVertex("agency:D");
         Vertex split_d = null;
@@ -465,6 +466,13 @@ public class TestPatternHopFactory extends TestCase {
 
         path = spt.getPath(near_c, false);
         assertNull(path);
+        
+        // stop E has no accessibility information, but we should still be able to route to it.
+        options.setRoutingContext(graph, near_a, near_e);
+        spt = aStar.getShortestPathTree(options);
+
+        path = spt.getPath(near_e, false);
+        assertNotNull(path);
 
         // from stop A to stop D would normally be trip 1.1 to trip 2.1, arriving at 00:30. But trip
         // 2 is not accessible, so we'll do 1.1 to 3.1, arriving at 01:00

@@ -30,7 +30,8 @@ import org.opentripplanner.routing.util.UniqueIdGenerator;
 import com.vividsolutions.jts.geom.LineString;
 
 /**
- * This is the standard implementation of an edge with fixed from and to Vertex instances; all standard OTP edges are subclasses of this.
+ * This is the standard implementation of an edge with fixed from and to Vertex instances;
+ * all standard OTP edges are subclasses of this.
  */
 public abstract class Edge implements Serializable {
 
@@ -100,28 +101,6 @@ public abstract class Edge implements Serializable {
                 this.getToVertex() == e.getFromVertex());
     }
     
-    public void attachFrom(Vertex fromv) {
-        detachFrom();
-        if (fromv == null)
-            throw new IllegalStateException("attaching to fromv null");
-        this.fromv = fromv;
-        fromv.addOutgoing(this);
-    }
-
-    public void attachTo(Vertex tov) {
-        detachTo();
-        if (tov == null)
-            throw new IllegalStateException("attaching to tov null");
-        this.tov = tov;
-        tov.addIncoming(this);
-    }
-
-    /** Attach this edge to new endpoint vertices, keeping edgelists coherent */
-    public void attach(Vertex fromv, Vertex tov) {
-        attachFrom(fromv);
-        attachTo(tov);
-    }
-
     /**
      * Get a direction on paths where it matters, or null
      * 
@@ -129,40 +108,6 @@ public abstract class Edge implements Serializable {
      */
     public String getDirection() {
         return null;
-    }
-
-    protected boolean detachFrom() {
-        boolean detached = false;
-        if (fromv != null) {
-            detached = fromv.removeOutgoing(this);
-            fromv = null;
-        }
-        return detached;
-    }
-
-    protected boolean detachTo() {
-        boolean detached = false;
-        if (tov != null) {
-            detached = tov.removeIncoming(this);
-            tov = null;
-        }
-        return detached;
-    }
-
-    /**
-     * Disconnect this edge from its endpoint vertices, keeping edgelists coherent
-     * 
-     * @return
-     */
-    public int detach() {
-        int nDetached = 0;
-        if (detachFrom()) {
-            ++nDetached;
-        }
-        if (detachTo()) {
-            ++nDetached;
-        }
-        return nDetached;
     }
 
     /**
