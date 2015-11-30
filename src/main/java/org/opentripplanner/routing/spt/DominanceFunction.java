@@ -3,6 +3,7 @@ package org.opentripplanner.routing.spt;
 import org.opentripplanner.routing.core.RoutingRequest;
 import org.opentripplanner.routing.core.State;
 import org.opentripplanner.routing.edgetype.StreetEdge;
+import org.opentripplanner.routing.graph.Edge;
 
 import java.io.Serializable;
 import java.util.Objects;
@@ -66,10 +67,22 @@ public abstract class DominanceFunction implements Serializable {
             return false;
         }
 
-        // Are the two states arriving at a vertex from two different directions where turn restrictions apply?
-        if (a.backEdge != b.getBackEdge() && (a.backEdge instanceof StreetEdge)) {
-            if (! a.getOptions().getRoutingContext().graph.getTurnRestrictions(a.backEdge).isEmpty()) {
+        // Are the two states arriving at a vertex from two different directions
+        // and where the set of possible outgoing direction are different?
+        if (a.backEdge != b.getBackEdge() && a.getBackMode().isDriving()) {
+            if (!(b.backEdge instanceof StreetEdge) || !(a.backEdge instanceof StreetEdge))
                 return false;
+            StreetEdge sea = (StreetEdge) a.backEdge;
+            StreetEdge seb = (StreetEdge) b.backEdge;
+            for (Edge outgoing : a.getVertex().getOutgoing()) {
+                // We should check for U-turn in canTurnOnto()
+                // (isReverseOf) -- align with StreetEdge::doTraverse.
+                boolean canTurnA = sea.canTurnOnto(outgoing, a, a.getBackMode())
+                        && !outgoing.isReverseOf(sea);
+                boolean canTurnB = seb.canTurnOnto(outgoing, b, b.getBackMode())
+                        && !outgoing.isReverseOf(seb);
+                if (canTurnA != canTurnB)
+                    return false;
             }
         }
         
