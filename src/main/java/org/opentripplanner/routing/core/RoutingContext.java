@@ -253,11 +253,19 @@ public class RoutingContext implements Cloneable {
                 // TODO offset time by distance to nearest OSM node?
                 if (opt.arriveBy) {
                     // TODO what if there is no coordinate but instead a named place?
-                    toVertex = graph.streetIndex.getSampleVertexAt(opt.to.getCoordinate(), true);
+                    if (graph.hasStreets) {
+                        toVertex = graph.streetIndex.getSampleVertexAt(opt.to.getCoordinate(), true);
+                    } else {
+                        toVertex = graph.streetIndex.getVertexForLocation(opt.to, opt, true);
+                    }
                     fromVertex = null;
                 }
                 else {
-                    fromVertex = graph.streetIndex.getSampleVertexAt(opt.from.getCoordinate(), false);
+                    if (graph.hasStreets) {
+                        fromVertex = graph.streetIndex.getSampleVertexAt(opt.from.getCoordinate(), false);
+                    } else {
+                        fromVertex = graph.streetIndex.getVertexForLocation(opt.from, opt, false);
+                    }
                     toVertex = null;
                 }
             }
