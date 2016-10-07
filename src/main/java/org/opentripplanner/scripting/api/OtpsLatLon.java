@@ -13,6 +13,8 @@
 
 package org.opentripplanner.scripting.api;
 
+import org.opentripplanner.common.geometry.SphericalDistanceLibrary;
+
 /**
  * Simple geographical coordinates.
  * 
@@ -39,6 +41,22 @@ public class OtpsLatLon {
      */
     public double getLon() {
         return lon;
+    }
+
+    /**
+     * @return The approximate (fast to compute) distance between two points. Note: this is the fast
+     *         version and can lead to small imprecision when the two points are very further apart.
+     *         For small distances (< few kms) the error is usually negligeable.
+     */
+    public double fastDistance(OtpsLatLon loc) {
+        return SphericalDistanceLibrary.fastDistance(this.lat, this.lon, loc.lat, loc.lon);
+    }
+
+    /**
+     * @return The exact (slower to compute) haversine distance between two points.
+     */
+    public double distance(OtpsLatLon loc) {
+        return SphericalDistanceLibrary.distance(this.lat, this.lon, loc.lat, loc.lon);
     }
 
     @Override
