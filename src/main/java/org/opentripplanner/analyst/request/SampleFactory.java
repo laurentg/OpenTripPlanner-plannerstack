@@ -31,6 +31,7 @@ import org.opentripplanner.routing.graph.Edge;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.routing.graph.Vertex;
 import org.opentripplanner.routing.vertextype.OsmVertex;
+import org.opentripplanner.routing.vertextype.TransitStop;
 
 import java.util.*;
 
@@ -58,14 +59,43 @@ public class SampleFactory implements SampleSource {
     /** implements SampleSource interface */
     public Sample getSample(double lon, double lat) {
         Coordinate c = new Coordinate(lon, lat);
+        if (graph.hasStreets) {
+            return getStreetSample(c);
+        } else if (graph.hasTransit) {
+            return getTransitSample(c);
+        } else {
+            throw new RuntimeException("Can't get a sample w/o either a street or a transit network!");
+        }
+    }
+
+    /**
+     * Simply look for the closest transit stop.
+     */
+    private Sample getTransitSample(Coordinate c) {
+        double minDistance = Double.MAX_VALUE;
+        Vertex bestVertex = null;
+        for (Vertex v : graph.streetIndex.getNearbyTransitStops(c, searchRadiusM)) {
+            if (!(v instanceof TransitStop))
+                continue;
+            double d = SphericalDistanceLibrary.fastDistance(c, v.getCoordinate());
+            if (d < minDistance) {
+                minDistance = d;
+                bestVertex = v;
+            }
+        }
+        if (bestVertex == null)
+            return null;
+        return new Sample(bestVertex, (int)minDistance, null, 0);
+    }
+
+    private Sample getStreetSample(Coordinate c) {
+
         // query always returns a (possibly empty) list, but never null
         Envelope env = new Envelope(c);
         // find scaling factor for equirectangular projection
         double xscale = Math.cos(c.y * Math.PI / 180);
         env.expandBy(searchRadiusLat / xscale, searchRadiusLat);
-        @SuppressWarnings("unchecked")
         Collection<Vertex> vertices = graph.streetIndex.getVerticesForEnvelope(env);
-
         // make sure things are in the radius
         final TIntDoubleMap distances = new TIntDoubleHashMap();
 
@@ -73,8 +103,8 @@ public class SampleFactory implements SampleSource {
             if (!(v instanceof OsmVertex)) continue;
 
             // figure ersatz distance
-            double dx = (lon - v.getLon()) * xscale;
-            double dy = lat - v.getLat();
+            double dx = (c.x - v.getLon()) * xscale;
+            double dy = c.y - v.getLat();
             distances.put(v.getIndex(), dx * dx + dy * dy);
         }
 
@@ -165,8 +195,8 @@ public class SampleFactory implements SampleSource {
             v1 = vx[1];
         }
 
-        double d0 = v0 != null ? SphericalDistanceLibrary.distance(v0.getLat(),  v0.getLon(), lat, lon) : 0;
-        double d1 = v1 != null ? SphericalDistanceLibrary.distance(v1.getLat(),  v1.getLon(), lat, lon) : 0;
+        double d0 = v0 != null ? SphericalDistanceLibrary.distance(v0.getLat(),  v0.getLon(), c.y, c.x) : 0;
+        double d1 = v1 != null ? SphericalDistanceLibrary.distance(v1.getLat(),  v1.getLon(), c.y, c.x) : 0;
         return new Sample(v0, (int) d0, v1, (int) d1);
     }
 
