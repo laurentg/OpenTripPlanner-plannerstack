@@ -68,7 +68,7 @@ public class Sample {
             m0 = (s0.getWalkDistance() + d0);
         if (s1 != null)
             m1 = (s1.getWalkDistance() + d1);
-        return (m0 < m1) ? m0 : m1;
+        return Double.isNaN(m0) ? m1 : Double.isNaN(m1) ? m0 : m0 < m1 ? m0 : m1;
     }
 
     /* DUPLICATES code in sampleSet.eval(). should be deduplicated using a common function of vertices/dists. */
