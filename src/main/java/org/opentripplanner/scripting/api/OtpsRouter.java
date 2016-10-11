@@ -54,7 +54,9 @@ public class OtpsRouter {
             req2.setRoutingContext(router.graph);
             // TODO verify that this is indeed the intended behavior.
             ShortestPathTree spt = new AStar().getShortestPathTree(req2);
-            return new OtpsSPT(spt, router.graph.getSampleFactory());
+            OtpsSPT ret = new OtpsSPT(spt, router.graph.getSampleFactory());
+            req2.cleanup();
+            return ret;
         } catch (VertexNotFoundException e) {
             // Can happen, not really an error
             return null;
